@@ -2,6 +2,11 @@ import Link from "next/link";
 
 const tools = [
   {
+    name: "AI 聊天助手",
+    desc: "日常问答、方案整理、内容创作，帮你快速解决问题。",
+    tag: "通用问答",
+  },
+  {
     name: "爆款文案",
     desc: "输入产品或主题，自动生成抖音、小红书、朋友圈文案。",
     tag: "内容创作",
@@ -20,6 +25,31 @@ const tools = [
     name: "代码助手",
     desc: "解释报错、修改页面、辅助开发，小白也能看懂。",
     tag: "开发辅助",
+  },
+  {
+    name: "短视频脚本",
+    desc: "自动生成短视频标题、口播脚本、分镜和结尾引导。",
+    tag: "视频创作",
+  },
+  {
+    name: "朋友圈文案",
+    desc: "生成适合朋友圈、社群、私域转化的自然文案。",
+    tag: "私域运营",
+  },
+  {
+    name: "SEO文章",
+    desc: "生成适合网站、公众号、博客发布的结构化文章。",
+    tag: "搜索优化",
+  },
+  {
+    name: "日报周报",
+    desc: "把零散工作内容整理成正式日报、周报和项目总结。",
+    tag: "办公效率",
+  },
+  {
+    name: "翻译润色",
+    desc: "帮你润色、改写、翻译，让表达更自然更专业。",
+    tag: "文本优化",
   },
 ];
 
@@ -43,9 +73,15 @@ export default function HomePage() {
           <a href="#tools" className="hover:text-white">
             工具
           </a>
+
           <a href="#steps" className="hover:text-white">
             使用流程
           </a>
+
+          <Link href="/pricing" className="hover:text-white">
+            套餐价格
+          </Link>
+
           <a href="#start" className="hover:text-white">
             开始使用
           </a>
@@ -73,8 +109,9 @@ export default function HomePage() {
         </h1>
 
         <p className="mt-8 max-w-3xl text-lg leading-8 text-zinc-400 md:text-xl">
-          AI Bot Pro 集成文案生成、标题创作、广告优化、代码辅助等常用工具。
-          不需要会写提示词，输入简单需求，AI 自动帮你生成结果。
+          AI Bot Pro 集成文案生成、标题创作、广告优化、短视频脚本、SEO
+          文章、日报周报、代码辅助等常用工具。不需要会写提示词，输入简单需求，
+          AI 自动帮你生成结果。
         </p>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -95,7 +132,7 @@ export default function HomePage() {
 
         <div className="mt-12 grid w-full max-w-4xl gap-4 text-left md:grid-cols-3">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <div className="text-3xl font-black">5+</div>
+            <div className="text-3xl font-black">10+</div>
             <div className="mt-2 text-zinc-400">常用 AI 工具</div>
           </div>
 
@@ -116,15 +153,17 @@ export default function HomePage() {
           <div className="mb-4 text-sm font-bold text-blue-400">
             AI TOOLS
           </div>
+
           <h2 className="text-4xl font-black md:text-5xl">
-            常用工具，一站集成
+            10+ 常用工具，一站集成
           </h2>
+
           <p className="mt-5 text-zinc-400">
-            不用到处找工具，一个页面就能完成大部分 AI 创作需求。
+            不用到处找工具，一个页面就能完成大部分 AI 创作、办公和运营需求。
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           {tools.map((tool) => (
             <Link
               key={tool.name}
@@ -177,6 +216,7 @@ export default function HomePage() {
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-xl font-black text-black">
                     {index + 1}
                   </div>
+
                   <div className="text-lg font-bold">{step}</div>
                 </div>
               ))}
@@ -192,16 +232,25 @@ export default function HomePage() {
           </h2>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
-            输入一个关键词，AI 自动生成文案、标题、广告词和解决方案。
-            适合自媒体、运营、销售、创业者和普通办公用户。
+            输入一个关键词，AI 自动生成文案、标题、广告词、短视频脚本、
+            SEO文章和工作汇报。适合自媒体、运营、销售、创业者和普通办公用户。
           </p>
 
-          <Link
-            href="/chat"
-            className="mt-10 inline-flex rounded-2xl bg-white px-10 py-4 text-lg font-black text-black transition hover:bg-zinc-200"
-          >
-            进入 AI 工具箱
-          </Link>
+          <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
+            <Link
+              href="/chat"
+              className="inline-flex rounded-2xl bg-white px-10 py-4 text-lg font-black text-black transition hover:bg-zinc-200"
+            >
+              进入 AI 工具箱
+            </Link>
+
+            <Link
+              href="/pricing"
+              className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-10 py-4 text-lg font-black text-white transition hover:bg-white/10"
+            >
+              查看套餐价格
+            </Link>
+          </div>
         </div>
       </section>
 
