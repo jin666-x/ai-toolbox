@@ -31,6 +31,10 @@ export default function LoginPage() {
             会员中心
           </Link>
 
+          <Link href="/contact" className="hover:text-white">
+            联系我们
+          </Link>
+
           <Link href="/login" className="text-white">
             登录
           </Link>
@@ -101,6 +105,13 @@ export default function LoginPage() {
               >
                 查看套餐价格
               </Link>
+
+              <Link
+                href="/contact"
+                className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center font-black text-white transition hover:bg-white/10"
+              >
+                联系我们
+              </Link>
             </div>
           </div>
 
@@ -169,6 +180,13 @@ export default function LoginPage() {
               </Link>
 
               <Link
+                href="/contact"
+                className="rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center font-black text-white transition hover:bg-white/10"
+              >
+                联系我们
+              </Link>
+
+              <Link
                 href="/chat"
                 className="rounded-2xl bg-white px-6 py-4 text-center font-black text-black transition hover:bg-zinc-200"
               >
@@ -183,6 +201,10 @@ export default function LoginPage() {
         <div className="mb-4 flex flex-wrap justify-center gap-5">
           <Link href="/about" className="transition hover:text-white">
             关于我们
+          </Link>
+
+          <Link href="/contact" className="transition hover:text-white">
+            联系我们
           </Link>
 
           <Link href="/privacy" className="transition hover:text-white">
