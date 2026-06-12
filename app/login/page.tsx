@@ -23,8 +23,16 @@ export default function LoginPage() {
             套餐价格
           </Link>
 
+          <Link href="/waitlist" className="hover:text-white">
+            等待名单
+          </Link>
+
           <Link href="/dashboard" className="hover:text-white">
             会员中心
+          </Link>
+
+          <Link href="/login" className="text-white">
+            登录
           </Link>
         </nav>
 
@@ -77,6 +85,22 @@ export default function LoginPage() {
                   数据库记录用量
                 </div>
               </div>
+            </div>
+
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+              <Link
+                href="/waitlist"
+                className="rounded-2xl bg-white px-8 py-4 text-center font-black text-black transition hover:bg-zinc-200"
+              >
+                加入等待名单
+              </Link>
+
+              <Link
+                href="/pricing"
+                className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center font-black text-white transition hover:bg-white/10"
+              >
+                查看套餐价格
+              </Link>
             </div>
           </div>
 
@@ -138,6 +162,13 @@ export default function LoginPage() {
               </Link>
 
               <Link
+                href="/waitlist"
+                className="rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center font-black text-white transition hover:bg-white/10"
+              >
+                加入 Pro 等待名单
+              </Link>
+
+              <Link
                 href="/chat"
                 className="rounded-2xl bg-white px-6 py-4 text-center font-black text-black transition hover:bg-zinc-200"
               >
@@ -166,8 +197,16 @@ export default function LoginPage() {
             套餐价格
           </Link>
 
+          <Link href="/waitlist" className="transition hover:text-white">
+            等待名单
+          </Link>
+
           <Link href="/dashboard" className="transition hover:text-white">
             会员中心
+          </Link>
+
+          <Link href="/login" className="transition hover:text-white">
+            登录
           </Link>
         </div>
 
