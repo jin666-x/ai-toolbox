@@ -562,6 +562,22 @@ export default function ChatPage() {
 
   useEffect(() => {
     setUsageCount(getUsage());
+
+    const params = new URLSearchParams(window.location.search);
+    const toolId = params.get("tool");
+
+    if (!toolId) {
+      return;
+    }
+
+    const foundTool = tools.find((tool) => tool.id === toolId);
+
+    if (foundTool) {
+      setActiveTool(foundTool);
+      setMessage("");
+      setReply("");
+      setError("");
+    }
   }, []);
 
   async function sendMessage() {
@@ -616,6 +632,12 @@ export default function ChatPage() {
     setMessage("");
     setReply("");
     setError("");
+
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tool", tool.id);
+      window.history.replaceState(null, "", url.toString());
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {

@@ -2,51 +2,61 @@ import Link from "next/link";
 
 const tools = [
   {
+    id: "chat",
     name: "AI 聊天助手",
     desc: "日常问答、方案整理、内容创作，帮你快速解决问题。",
     tag: "通用问答",
   },
   {
+    id: "copy",
     name: "爆款文案",
     desc: "输入产品或主题，自动生成抖音、小红书、朋友圈文案。",
     tag: "内容创作",
   },
   {
+    id: "title",
     name: "标题生成",
     desc: "快速生成吸睛标题，适合短视频、广告、公众号。",
     tag: "流量标题",
   },
   {
+    id: "ad",
     name: "广告优化",
     desc: "把普通广告词优化成更有点击欲望的转化文案。",
     tag: "提升转化",
   },
   {
+    id: "code",
     name: "代码助手",
     desc: "解释报错、修改页面、辅助开发，小白也能看懂。",
     tag: "开发辅助",
   },
   {
+    id: "script",
     name: "短视频脚本",
     desc: "自动生成短视频标题、口播脚本、分镜和结尾引导。",
     tag: "视频创作",
   },
   {
+    id: "moments",
     name: "朋友圈文案",
     desc: "生成适合朋友圈、社群、私域转化的自然文案。",
     tag: "私域运营",
   },
   {
+    id: "seo",
     name: "SEO文章",
     desc: "生成适合网站、公众号、博客发布的结构化文章。",
     tag: "搜索优化",
   },
   {
+    id: "report",
     name: "日报周报",
     desc: "把零散工作内容整理成正式日报、周报和项目总结。",
     tag: "办公效率",
   },
   {
+    id: "rewrite",
     name: "翻译润色",
     desc: "帮你润色、改写、翻译，让表达更自然更专业。",
     tag: "文本优化",
@@ -167,7 +177,7 @@ export default function HomePage() {
           {tools.map((tool) => (
             <Link
               key={tool.name}
-              href="/chat"
+              href={`/chat?tool=${tool.id}`}
               className="group rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/10"
             >
               <div className="mb-5 inline-flex rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs text-blue-300">
