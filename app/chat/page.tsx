@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -46,6 +46,59 @@ const tools = [
     example: "帮我解释一下 Next.js 里面 app/page.tsx 是干嘛的",
   },
 ];
+
+const DAILY_LIMIT = 5;
+const USAGE_KEY = "ai_bot_pro_daily_usage";
+
+function getToday() {
+  return new Date().toLocaleDateString("zh-CN");
+}
+
+function getUsage() {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+
+  const raw = localStorage.getItem(USAGE_KEY);
+
+  if (!raw) {
+    return 0;
+  }
+
+  try {
+    const data = JSON.parse(raw);
+
+    if (data.date !== getToday()) {
+      localStorage.setItem(
+        USAGE_KEY,
+        JSON.stringify({
+          date: getToday(),
+          count: 0,
+        })
+      );
+
+      return 0;
+    }
+
+    return Number(data.count || 0);
+  } catch {
+    return 0;
+  }
+}
+
+function saveUsage(count: number) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.setItem(
+    USAGE_KEY,
+    JSON.stringify({
+      date: getToday(),
+      count,
+    })
+  );
+}
 
 function buildFinalPrompt(toolId: string, userInput: string) {
   if (toolId === "copy") {
@@ -253,9 +306,24 @@ export default function ChatPage() {
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [usageCount, setUsageCount] = useState(0);
+
+  const remainingCount = Math.max(DAILY_LIMIT - usageCount, 0);
+
+  useEffect(() => {
+    setUsageCount(getUsage());
+  }, []);
 
   async function sendMessage() {
     if (!message.trim() || loading) return;
+
+    const currentUsage = getUsage();
+
+    if (currentUsage >= DAILY_LIMIT) {
+      setError("今日免费次数已用完，请明天再来。");
+      setUsageCount(currentUsage);
+      return;
+    }
 
     setLoading(true);
     setReply("");
@@ -282,6 +350,10 @@ export default function ChatPage() {
       }
 
       setReply(data.reply || "AI 没有返回内容，请重新试一次。");
+
+      const newUsage = currentUsage + 1;
+      saveUsage(newUsage);
+      setUsageCount(newUsage);
     } catch (err) {
       setError(err instanceof Error ? err.message : "请求失败，请稍后重试。");
     } finally {
@@ -398,18 +470,24 @@ export default function ChatPage() {
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-zinc-500">
-                提示：按 Ctrl + Enter 可以快速发送
+                今日剩余免费次数：{remainingCount} / {DAILY_LIMIT}
               </p>
 
               <button
                 onClick={sendMessage}
-                disabled={loading || !message.trim()}
+                disabled={loading || !message.trim() || remainingCount <= 0}
                 className="rounded-2xl bg-white px-8 py-3 font-bold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? "生成中..." : "发送消息"}
               </button>
             </div>
           </div>
+
+          {remainingCount <= 0 && !error && (
+            <div className="mt-5 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-yellow-300">
+              今日免费次数已用完，请明天再来。
+            </div>
+          )}
 
           {error && (
             <div className="mt-5 rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-red-300">
