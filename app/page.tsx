@@ -34,7 +34,7 @@ const tools = [
   {
     id: "script",
     name: "短视频脚本",
-    desc: "自动生成短视频标题、口播脚本、分镜和结尾引导。",
+    desc: "自动生成短视频标题、口播脚本和结尾引导。",
     tag: "视频创作",
   },
   {
@@ -160,9 +160,7 @@ export default function HomePage() {
 
       <section id="tools" className="relative mx-auto max-w-7xl px-6 py-20">
         <div className="mb-12 text-center">
-          <div className="mb-4 text-sm font-bold text-blue-400">
-            AI TOOLS
-          </div>
+          <div className="mb-4 text-sm font-bold text-blue-400">AI TOOLS</div>
 
           <h2 className="text-4xl font-black md:text-5xl">
             10+ 常用工具，一站集成
@@ -265,7 +263,25 @@ export default function HomePage() {
       </section>
 
       <footer className="relative border-t border-white/10 px-6 py-8 text-center text-sm text-zinc-500">
-        © 2026 AI Bot Pro. All rights reserved.
+        <div className="mb-4 flex flex-wrap justify-center gap-5">
+          <Link href="/about" className="transition hover:text-white">
+            关于我们
+          </Link>
+
+          <Link href="/privacy" className="transition hover:text-white">
+            隐私政策
+          </Link>
+
+          <Link href="/terms" className="transition hover:text-white">
+            服务条款
+          </Link>
+
+          <Link href="/pricing" className="transition hover:text-white">
+            套餐价格
+          </Link>
+        </div>
+
+        <div>© 2026 AI Bot Pro. All rights reserved.</div>
       </footer>
     </main>
   );
