@@ -299,6 +299,10 @@ export default function HomePage() {
             关于我们
           </Link>
 
+          <Link href="/contact" className="transition hover:text-white">
+            联系我们
+          </Link>
+
           <Link href="/privacy" className="transition hover:text-white">
             隐私政策
           </Link>
