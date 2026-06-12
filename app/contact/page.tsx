@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 const contactCards = [
   {
@@ -15,7 +18,62 @@ const contactCards = [
   },
 ];
 
+type SubmitStatus = "idle" | "success" | "error";
+
 export default function ContactPage() {
+  const [email, setEmail] = useState("");
+  const [feedbackType, setFeedbackType] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<SubmitStatus>("idle");
+  const [statusText, setStatusText] = useState("");
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    if (loading) {
+      return;
+    }
+
+    setLoading(true);
+    setStatus("idle");
+    setStatusText("");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          type: feedbackType,
+          message,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "提交失败，请稍后再试。");
+      }
+
+      setStatus("success");
+      setStatusText(data?.message || "提交成功，我们已经收到你的反馈。");
+
+      setEmail("");
+      setFeedbackType("");
+      setMessage("");
+    } catch (error) {
+      setStatus("error");
+      setStatusText(
+        error instanceof Error ? error.message : "提交失败，请稍后再试。"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.2),transparent_35%)]" />
@@ -44,6 +102,10 @@ export default function ContactPage() {
 
           <Link href="/dashboard" className="hover:text-white">
             会员中心
+          </Link>
+
+          <Link href="/contact" className="text-white">
+            联系我们
           </Link>
 
           <Link href="/login" className="hover:text-white">
@@ -76,7 +138,8 @@ export default function ContactPage() {
 
             <p className="mt-8 max-w-2xl text-lg leading-8 text-zinc-400">
               如果你想了解 Pro 套餐、反馈使用问题、咨询合作或提出功能建议，
-              后续都可以通过这个页面联系。当前为展示版页面，暂未接入真实表单提交。
+              可以通过这个页面提交。当前版本已经可以提交到后端接口，
+              后续可以继续接入邮箱通知、数据库或飞书通知。
             </p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -101,11 +164,11 @@ export default function ContactPage() {
               <h2 className="text-3xl font-black">提交反馈</h2>
 
               <p className="mt-3 text-sm leading-6 text-zinc-400">
-                当前是展示版表单，后续可接入邮箱、数据库或飞书通知。
+                填写后会提交到 /api/contact 接口。后续可以继续接邮箱、数据库或通知机器人。
               </p>
             </div>
 
-            <div className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-bold text-zinc-300">
                   你的邮箱
@@ -113,9 +176,10 @@ export default function ContactPage() {
 
                 <input
                   type="email"
-                  disabled
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="请输入你的邮箱"
-                  className="w-full cursor-not-allowed rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-white outline-none placeholder:text-zinc-600"
+                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-white outline-none placeholder:text-zinc-600 focus:border-white/30"
                 />
               </div>
 
@@ -125,41 +189,70 @@ export default function ContactPage() {
                 </label>
 
                 <select
-                  disabled
-                  className="w-full cursor-not-allowed rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-zinc-500 outline-none"
+                  value={feedbackType}
+                  onChange={(e) => setFeedbackType(e.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-white outline-none focus:border-white/30"
                 >
-                  <option>请选择反馈类型</option>
-                  <option>产品咨询</option>
-                  <option>问题反馈</option>
-                  <option>商务合作</option>
-                  <option>功能建议</option>
+                  <option value="">请选择反馈类型</option>
+                  <option value="产品咨询">产品咨询</option>
+                  <option value="问题反馈">问题反馈</option>
+                  <option value="商务合作">商务合作</option>
+                  <option value="功能建议">功能建议</option>
                 </select>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-zinc-300">
-                  具体内容
-                </label>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="block text-sm font-bold text-zinc-300">
+                    具体内容
+                  </label>
+
+                  <span
+                    className={`text-xs ${
+                      message.length > 1000 ? "text-red-400" : "text-zinc-500"
+                    }`}
+                  >
+                    {message.length} / 1000
+                  </span>
+                </div>
 
                 <textarea
-                  disabled
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                   placeholder="请输入你想反馈的内容"
-                  className="h-32 w-full cursor-not-allowed resize-none rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-white outline-none placeholder:text-zinc-600"
+                  className={`h-32 w-full resize-none rounded-2xl border bg-black/40 px-5 py-4 text-white outline-none placeholder:text-zinc-600 ${
+                    message.length > 1000
+                      ? "border-red-500/60"
+                      : "border-white/10 focus:border-white/30"
+                  }`}
                 />
               </div>
 
               <button
-                disabled
-                className="w-full cursor-not-allowed rounded-2xl bg-white/20 px-6 py-4 font-black text-zinc-400"
+                type="submit"
+                disabled={loading || message.length > 1000}
+                className="w-full rounded-2xl bg-white px-6 py-4 font-black text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                提交功能即将开放
+                {loading ? "提交中..." : "提交反馈"}
               </button>
 
-              <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm leading-6 text-yellow-200">
-                这个页面现在用于完善网站结构。后续接入真实提交后，
-                可以自动收集用户邮箱、反馈内容和合作需求。
+              {statusText && (
+                <div
+                  className={`rounded-2xl border p-4 text-sm leading-6 ${
+                    status === "success"
+                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+                      : "border-red-500/20 bg-red-500/10 text-red-200"
+                  }`}
+                >
+                  {statusText}
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm leading-6 text-blue-200">
+                当前提交会记录在服务端日志中。部署到 Vercel 后，可以在 Vercel
+                项目日志里查看提交内容。下一步可以继续接入邮箱通知或数据库保存。
               </div>
-            </div>
+            </form>
           </div>
         </div>
       </section>
