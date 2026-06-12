@@ -103,6 +103,10 @@ export default function PricingPage() {
             会员中心
           </Link>
 
+          <Link href="/contact" className="hover:text-white">
+            联系我们
+          </Link>
+
           <Link href="/login" className="hover:text-white">
             登录
           </Link>
@@ -159,10 +163,10 @@ export default function PricingPage() {
           </Link>
 
           <Link
-            href="/dashboard"
+            href="/contact"
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
           >
-            查看会员中心
+            咨询 Pro 套餐
           </Link>
         </div>
       </section>
@@ -264,10 +268,10 @@ export default function PricingPage() {
                 </Link>
 
                 <Link
-                  href="/dashboard"
+                  href="/contact"
                   className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
                 >
-                  查看会员中心
+                  联系我们
                 </Link>
               </div>
             </div>
@@ -321,6 +325,10 @@ export default function PricingPage() {
         <div className="mb-4 flex flex-wrap justify-center gap-5">
           <Link href="/about" className="transition hover:text-white">
             关于我们
+          </Link>
+
+          <Link href="/contact" className="transition hover:text-white">
+            联系我们
           </Link>
 
           <Link href="/privacy" className="transition hover:text-white">
