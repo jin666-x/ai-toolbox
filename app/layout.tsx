@@ -33,6 +33,11 @@ export const metadata: Metadata = {
   authors: [{ name: "AI Bot Pro" }],
   creator: "AI Bot Pro",
   publisher: "AI Bot Pro",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
   robots: {
     index: true,
     follow: true,
