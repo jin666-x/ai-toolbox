@@ -17,7 +17,6 @@ const plans = [
     button: "免费开始使用",
     href: "/chat",
     hot: false,
-    disabled: false,
     status: "当前可用",
   },
   {
@@ -36,7 +35,6 @@ const plans = [
     button: "加入等待名单",
     href: "/dashboard",
     hot: true,
-    disabled: false,
     status: "即将开放",
   },
   {
@@ -55,7 +53,6 @@ const plans = [
     button: "加入等待名单",
     href: "/dashboard",
     hot: false,
-    disabled: false,
     status: "即将开放",
   },
 ];
@@ -101,14 +98,27 @@ export default function PricingPage() {
           <Link href="/dashboard" className="hover:text-white">
             会员中心
           </Link>
+
+          <Link href="/login" className="hover:text-white">
+            登录
+          </Link>
         </nav>
 
-        <Link
-          href="/dashboard"
-          className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-        >
-          会员中心
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="hidden rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
+          >
+            登录
+          </Link>
+
+          <Link
+            href="/chat"
+            className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
+          >
+            免费体验
+          </Link>
+        </div>
       </header>
 
       <section className="relative mx-auto max-w-7xl px-6 pb-20 pt-16 text-center md:pt-24">
@@ -142,6 +152,13 @@ export default function PricingPage() {
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
           >
             查看会员中心
+          </Link>
+
+          <Link
+            href="/login"
+            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
+          >
+            登录账号
           </Link>
         </div>
       </section>
@@ -243,10 +260,10 @@ export default function PricingPage() {
                 </Link>
 
                 <Link
-                  href="/chat"
+                  href="/login"
                   className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
                 >
-                  免费体验工具箱
+                  登录会员账号
                 </Link>
               </div>
             </div>
@@ -310,8 +327,16 @@ export default function PricingPage() {
             服务条款
           </Link>
 
+          <Link href="/pricing" className="transition hover:text-white">
+            套餐价格
+          </Link>
+
           <Link href="/dashboard" className="transition hover:text-white">
             会员中心
+          </Link>
+
+          <Link href="/login" className="transition hover:text-white">
+            登录
           </Link>
         </div>
 
