@@ -33,7 +33,7 @@ const plans = [
       "适合销售和广告投放",
     ],
     button: "加入等待名单",
-    href: "/dashboard",
+    href: "/waitlist",
     hot: true,
     status: "即将开放",
   },
@@ -51,7 +51,7 @@ const plans = [
       "后续可升级更多权益",
     ],
     button: "加入等待名单",
-    href: "/dashboard",
+    href: "/waitlist",
     hot: false,
     status: "即将开放",
   },
@@ -93,6 +93,10 @@ export default function PricingPage() {
 
           <Link href="/pricing" className="text-white">
             套餐价格
+          </Link>
+
+          <Link href="/waitlist" className="hover:text-white">
+            等待名单
           </Link>
 
           <Link href="/dashboard" className="hover:text-white">
@@ -148,17 +152,17 @@ export default function PricingPage() {
           </Link>
 
           <Link
+            href="/waitlist"
+            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
+          >
+            加入等待名单
+          </Link>
+
+          <Link
             href="/dashboard"
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
           >
             查看会员中心
-          </Link>
-
-          <Link
-            href="/login"
-            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
-          >
-            登录账号
           </Link>
         </div>
       </section>
@@ -215,7 +219,7 @@ export default function PricingPage() {
 
             {plan.status === "即将开放" && (
               <p className="mt-3 text-center text-xs text-zinc-500">
-                支付功能暂未开放，可先进入会员中心查看权益。
+                支付功能暂未开放，可先加入等待名单，后续优先体验 Pro 权益。
               </p>
             )}
 
@@ -236,34 +240,34 @@ export default function PricingPage() {
           <div className="grid gap-10 md:grid-cols-2 md:items-center">
             <div>
               <div className="mb-4 text-sm font-bold text-blue-400">
-                MEMBER CENTER
+                PRO WAITLIST
               </div>
 
               <h2 className="text-4xl font-black md:text-5xl">
-                会员中心雏形，
+                Pro 即将开放，
                 <br />
-                先把商业框架搭起来
+                先加入等待名单
               </h2>
 
               <p className="mt-6 leading-8 text-zinc-400">
-                后续接入登录、数据库和支付后，会员中心可以展示用户套餐、
-                今日剩余次数、使用记录、订单状态和 Pro 权益。现在先做展示版本，
-                让网站看起来更完整。
+                后续接入登录、数据库和支付后，Pro 套餐可以提供更多使用次数、
+                更长内容生成、更多专业工具和会员权益。现在可以先进入等待名单页面，
+                后续方便接入邮箱收集和用户需求登记。
               </p>
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <Link
-                  href="/dashboard"
+                  href="/waitlist"
                   className="inline-flex rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
                 >
-                  进入会员中心
+                  加入等待名单
                 </Link>
 
                 <Link
-                  href="/login"
+                  href="/dashboard"
                   className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
                 >
-                  登录会员账号
+                  查看会员中心
                 </Link>
               </div>
             </div>
@@ -329,6 +333,10 @@ export default function PricingPage() {
 
           <Link href="/pricing" className="transition hover:text-white">
             套餐价格
+          </Link>
+
+          <Link href="/waitlist" className="transition hover:text-white">
+            等待名单
           </Link>
 
           <Link href="/dashboard" className="transition hover:text-white">
