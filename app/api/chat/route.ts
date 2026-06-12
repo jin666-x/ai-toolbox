@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 
 const DAILY_LIMIT = 5;
+const MAX_MESSAGE_LENGTH = 2000;
 
 type UsageRecord = {
   date: string;
@@ -134,6 +135,17 @@ export async function POST(req: Request) {
       );
     }
 
+    const cleanMessage = message.trim();
+
+    if (cleanMessage.length > MAX_MESSAGE_LENGTH) {
+      return Response.json(
+        {
+          error: `输入内容太长了，免费版每次最多输入 ${MAX_MESSAGE_LENGTH} 个字，请精简后再试。`,
+        },
+        { status: 400 }
+      );
+    }
+
     const client = new OpenAI({
       apiKey,
       baseURL: "https://api.deepseek.com",
@@ -148,7 +160,7 @@ export async function POST(req: Request) {
         },
         {
           role: "user",
-          content: message.trim(),
+          content: cleanMessage,
         },
       ],
       temperature: tool === "code" ? 0.4 : 0.8,
@@ -166,14 +178,14 @@ export async function POST(req: Request) {
       );
     }
 
-    increaseIpUsage(ip);
+    const used = increaseIpUsage(ip);
 
     return Response.json({
       reply,
       usage: {
-        used: getIpUsage(ip),
+        used,
         limit: DAILY_LIMIT,
-        remaining: Math.max(DAILY_LIMIT - getIpUsage(ip), 0),
+        remaining: Math.max(DAILY_LIMIT - used, 0),
       },
     });
   } catch (error: unknown) {
