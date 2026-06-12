@@ -1,309 +1,215 @@
+"use client";
+
 import Link from "next/link";
-
-const stats = [
-  {
-    label: "当前套餐",
-    value: "免费体验版",
-    desc: "后续登录后可显示真实套餐",
-  },
-  {
-    label: "今日剩余",
-    value: "5 次",
-    desc: "免费版每日基础体验次数",
-  },
-  {
-    label: "会员状态",
-    value: "未开通",
-    desc: "Pro 套餐即将开放",
-  },
-];
-
-const benefits = [
-  "更高每日使用次数",
-  "支持更长内容生成",
-  "优先体验新 AI 工具",
-  "更多专业创作模板",
-  "适合自媒体、运营、销售长期使用",
-  "后续可接入订单和发票记录",
-];
+import { useEffect, useMemo, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
 
 export default function DashboardPage() {
+  const supabase = useMemo(() => createClient(), []);
+
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadUser() {
+      setLoading(true);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      if (!session?.user) {
+        setUser(null);
+        setLoading(false);
+        window.location.replace("/login");
+        return;
+      }
+
+      setUser(session.user);
+      setLoading(false);
+    }
+
+    loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+
+      if (session?.user) {
+        setUser(session.user);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  async function handleLogout() {
+    setLogoutLoading(true);
+
+    try {
+      await Promise.race([
+        supabase.auth.signOut({
+          scope: "local",
+        }),
+        new Promise((resolve) => setTimeout(resolve, 1200)),
+      ]);
+    } catch (error) {
+      console.error("退出登录失败：", error);
+    }
+
+    if (typeof window !== "undefined") {
+      Object.keys(window.localStorage).forEach((key) => {
+        if (key.startsWith("sb-") || key.includes("supabase")) {
+          window.localStorage.removeItem(key);
+        }
+      });
+
+      Object.keys(window.sessionStorage).forEach((key) => {
+        if (key.startsWith("sb-") || key.includes("supabase")) {
+          window.sessionStorage.removeItem(key);
+        }
+      });
+
+      window.location.href = "/login";
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.04] px-8 py-6 text-center">
+          <div className="text-lg font-black">正在加载会员中心...</div>
+          <p className="mt-2 text-sm text-white/50">请稍等</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.2),transparent_35%)]" />
+    <main className="min-h-screen bg-[#050505] text-white">
+      <section className="relative overflow-hidden border-b border-white/10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.35),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.25),transparent_35%)]" />
 
-      <header className="relative mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <Link href="/" className="text-2xl font-black tracking-tight">
-          AI Bot Pro
-        </Link>
+        <div className="relative mx-auto max-w-6xl px-6 py-8 md:px-8 lg:px-10">
+          <nav className="flex flex-wrap items-center justify-between gap-4">
+            <Link href="/" className="text-xl font-black tracking-tight">
+              AI Bot Pro
+            </Link>
 
-        <nav className="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
-          <Link href="/" className="hover:text-white">
-            首页
-          </Link>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
+              <Link href="/" className="hover:text-white">
+                首页
+              </Link>
+              <Link href="/chat" className="hover:text-white">
+                AI 工具
+              </Link>
+              <Link href="/pricing" className="hover:text-white">
+                套餐价格
+              </Link>
+              <Link href="/waitlist" className="hover:text-white">
+                等待名单
+              </Link>
+              <Link href="/contact" className="hover:text-white">
+                联系我们
+              </Link>
+            </div>
+          </nav>
 
-          <Link href="/chat" className="hover:text-white">
-            工具箱
-          </Link>
-
-          <Link href="/pricing" className="hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="text-white">
-            会员中心
-          </Link>
-
-          <Link href="/contact" className="hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/login" className="hover:text-white">
-            登录
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/contact"
-            className="hidden rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
-          >
-            联系我们
-          </Link>
-
-          <Link
-            href="/chat"
-            className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-          >
-            免费体验
-          </Link>
-        </div>
-      </header>
-
-      <section className="relative mx-auto max-w-7xl px-6 pb-12 pt-16 md:pt-24">
-        <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/10 px-5 py-2 text-sm text-zinc-300 backdrop-blur-xl">
-          MEMBER CENTER
-        </div>
-
-        <h1 className="text-5xl font-black leading-tight tracking-tight md:text-7xl">
-          会员中心
-          <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            {" "}
-            Dashboard
-          </span>
-        </h1>
-
-        <p className="mt-8 max-w-3xl text-lg leading-8 text-zinc-400">
-          当前为会员中心展示版本。后续接入登录、数据库和支付后，这里会显示你的套餐、
-          剩余次数、订单状态、使用记录和会员权益。
-        </p>
-
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-          <Link
-            href="/chat"
-            className="rounded-2xl bg-white px-8 py-4 text-center text-lg font-black text-black transition hover:bg-zinc-200"
-          >
-            进入 AI 工具箱
-          </Link>
-
-          <Link
-            href="/pricing"
-            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
-          >
-            查看套餐价格
-          </Link>
-
-          <Link
-            href="/waitlist"
-            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
-          >
-            加入等待名单
-          </Link>
-
-          <Link
-            href="/contact"
-            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
-          >
-            联系我们
-          </Link>
-        </div>
-      </section>
-
-      <section className="relative mx-auto grid max-w-7xl gap-6 px-6 pb-16 md:grid-cols-3">
-        {stats.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl"
-          >
-            <div className="text-sm font-bold text-zinc-500">{item.label}</div>
-            <div className="mt-4 text-4xl font-black">{item.value}</div>
-            <div className="mt-3 leading-7 text-zinc-400">{item.desc}</div>
-          </div>
-        ))}
-      </section>
-
-      <section className="relative mx-auto max-w-7xl px-6 pb-24">
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl md:p-10">
-            <div className="mb-4 text-sm font-bold text-blue-400">
-              CURRENT PLAN
+          <div className="py-14">
+            <div className="mb-5 inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
+              会员中心
             </div>
 
-            <h2 className="text-4xl font-black">免费体验版</h2>
+            <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-tight md:text-6xl">
+              欢迎回来，
+              <span className="block bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
+                管理你的 AI Bot Pro 账号。
+              </span>
+            </h1>
 
-            <p className="mt-5 leading-8 text-zinc-400">
-              你当前可以免费体验 AI Bot Pro 的基础功能。后续开通 Pro 后，
-              这里会显示真实会员套餐、到期时间、剩余次数和订单信息。
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
+              当前账号系统已经接入 Supabase。下一步可以继续把免费次数、Pro 套餐和使用记录绑定到你的账号上。
             </p>
+          </div>
+        </div>
+      </section>
 
-            <div className="mt-8 rounded-3xl border border-white/10 bg-black/30 p-6">
-              <div className="mb-2 text-sm text-zinc-500">今日使用限制</div>
-              <div className="text-3xl font-black">每日 5 次</div>
-              <div className="mt-2 text-sm text-zinc-400">
-                当前为免费体验限制，后续 Pro 版本可提高次数。
+      <section className="mx-auto grid max-w-6xl gap-6 px-6 py-10 md:px-8 lg:grid-cols-[1fr_0.8fr] lg:px-10">
+        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+          <h2 className="text-2xl font-black">账号信息</h2>
+
+          <div className="mt-6 space-y-4">
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+              <div className="text-sm text-white/45">登录邮箱</div>
+              <div className="mt-2 break-all text-lg font-black">
+                {user?.email || "未获取到邮箱"}
               </div>
             </div>
 
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Link
-                href="/chat"
-                className="inline-flex justify-center rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
-              >
-                立即使用
-              </Link>
-
-              <Link
-                href="/login"
-                className="inline-flex justify-center rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
-              >
-                登录账号
-              </Link>
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-blue-400/30 bg-blue-500/10 p-8 backdrop-blur-xl md:p-10">
-            <div className="mb-4 text-sm font-bold text-blue-300">
-              PRO BENEFITS
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+              <div className="text-sm text-white/45">用户 ID</div>
+              <div className="mt-2 break-all text-sm font-bold text-white/70">
+                {user?.id || "未获取到用户 ID"}
+              </div>
             </div>
 
-            <h2 className="text-4xl font-black">Pro 权益预览</h2>
-
-            <p className="mt-5 leading-8 text-zinc-300">
-              Pro 套餐即将开放，适合经常生成文案、标题、脚本、文章和办公内容的用户。
-            </p>
-
-            <div className="mt-8 space-y-4">
-              {benefits.map((item) => (
-                <div key={item} className="flex items-start gap-3">
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span className="text-zinc-200">{item}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Link
-                href="/pricing"
-                className="inline-flex justify-center rounded-2xl border border-white/10 bg-white/10 px-8 py-4 font-black text-white transition hover:bg-white/20"
-              >
-                查看 Pro 套餐
-              </Link>
-
-              <Link
-                href="/waitlist"
-                className="inline-flex justify-center rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
-              >
-                加入等待名单
-              </Link>
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+              <div className="text-sm text-white/45">当前套餐</div>
+              <div className="mt-2 text-lg font-black">Free 免费版</div>
+              <p className="mt-2 text-sm leading-6 text-white/50">
+                当前先展示账号状态。下一步可以继续把每日免费次数和 Pro 权限写入数据库。
+              </p>
             </div>
           </div>
         </div>
-      </section>
 
-      <section className="relative mx-auto max-w-7xl px-6 pb-24">
-        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center backdrop-blur-xl md:p-12">
-          <h2 className="text-4xl font-black md:text-5xl">
-            登录和支付功能即将接入
-          </h2>
+        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+          <h2 className="text-2xl font-black">快捷操作</h2>
 
-          <p className="mx-auto mt-6 max-w-2xl leading-8 text-zinc-400">
-            后续可以继续接入用户登录、数据库记录、支付回调、会员套餐、
-            使用次数扣减和订单管理，让 AI Bot Pro 变成真正可运营的商业产品。
-          </p>
-
-          <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
-            <Link
-              href="/waitlist"
-              className="rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
-            >
-              加入等待名单
-            </Link>
-
-            <Link
-              href="/contact"
-              className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
-            >
-              联系我们
-            </Link>
-
+          <div className="mt-6 grid gap-4">
             <Link
               href="/chat"
-              className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
+              className="rounded-2xl bg-white px-5 py-4 text-center font-black text-black transition hover:bg-white/90"
             >
-              先免费体验
+              进入 AI 工具箱
             </Link>
 
             <Link
-              href="/"
-              className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
+              href="/pricing"
+              className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-center font-bold text-white transition hover:border-white/30"
             >
-              返回首页
+              查看套餐价格
             </Link>
+
+            <Link
+              href="/waitlist"
+              className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-center font-bold text-white transition hover:border-white/30"
+            >
+              申请 Pro / 加入等待名单
+            </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={logoutLoading}
+              className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-center font-black text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {logoutLoading ? "退出中..." : "退出登录"}
+            </button>
           </div>
         </div>
       </section>
-
-      <footer className="relative border-t border-white/10 px-6 py-8 text-center text-sm text-zinc-500">
-        <div className="mb-4 flex flex-wrap justify-center gap-5">
-          <Link href="/about" className="transition hover:text-white">
-            关于我们
-          </Link>
-
-          <Link href="/contact" className="transition hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/privacy" className="transition hover:text-white">
-            隐私政策
-          </Link>
-
-          <Link href="/terms" className="transition hover:text-white">
-            服务条款
-          </Link>
-
-          <Link href="/pricing" className="transition hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="transition hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="transition hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/login" className="transition hover:text-white">
-            登录
-          </Link>
-        </div>
-
-        <div>© 2026 AI Bot Pro. All rights reserved.</div>
-      </footer>
     </main>
   );
 }
