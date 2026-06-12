@@ -42,8 +42,16 @@ export default function WaitlistPage() {
             套餐价格
           </Link>
 
+          <Link href="/waitlist" className="text-white">
+            等待名单
+          </Link>
+
           <Link href="/dashboard" className="hover:text-white">
             会员中心
+          </Link>
+
+          <Link href="/contact" className="hover:text-white">
+            联系我们
           </Link>
 
           <Link href="/login" className="hover:text-white">
@@ -51,12 +59,21 @@ export default function WaitlistPage() {
           </Link>
         </nav>
 
-        <Link
-          href="/chat"
-          className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-        >
-          免费体验
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/contact"
+            className="hidden rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
+          >
+            联系我们
+          </Link>
+
+          <Link
+            href="/chat"
+            className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
+          >
+            免费体验
+          </Link>
+        </div>
       </header>
 
       <section className="relative mx-auto max-w-7xl px-6 pb-20 pt-16 md:pt-24">
@@ -92,6 +109,13 @@ export default function WaitlistPage() {
                 className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
               >
                 查看套餐
+              </Link>
+
+              <Link
+                href="/contact"
+                className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
+              >
+                联系我们
               </Link>
             </div>
           </div>
@@ -142,6 +166,13 @@ export default function WaitlistPage() {
               >
                 等待名单功能即将开放
               </button>
+
+              <Link
+                href="/contact"
+                className="flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 font-black text-white transition hover:bg-white/10"
+              >
+                先联系我们咨询
+              </Link>
 
               <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm leading-6 text-yellow-200">
                 目前该页面用于展示商业闭环。后续接入 Supabase 或数据库后，
@@ -196,6 +227,13 @@ export default function WaitlistPage() {
             </Link>
 
             <Link
+              href="/contact"
+              className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
+            >
+              联系我们
+            </Link>
+
+            <Link
               href="/dashboard"
               className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
             >
@@ -218,6 +256,10 @@ export default function WaitlistPage() {
             关于我们
           </Link>
 
+          <Link href="/contact" className="transition hover:text-white">
+            联系我们
+          </Link>
+
           <Link href="/privacy" className="transition hover:text-white">
             隐私政策
           </Link>
@@ -228,6 +270,10 @@ export default function WaitlistPage() {
 
           <Link href="/pricing" className="transition hover:text-white">
             套餐价格
+          </Link>
+
+          <Link href="/waitlist" className="transition hover:text-white">
+            等待名单
           </Link>
 
           <Link href="/dashboard" className="transition hover:text-white">
