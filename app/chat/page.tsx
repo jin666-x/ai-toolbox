@@ -92,6 +92,16 @@ const DAILY_LIMIT = 5;
 const MAX_MESSAGE_LENGTH = 2000;
 const USAGE_KEY = "ai_bot_pro_daily_usage";
 
+type ChatApiResponse = {
+  reply?: string;
+  error?: string;
+  usage?: {
+    used?: number;
+    limit?: number;
+    remaining?: number;
+  };
+};
+
 function getToday() {
   return new Date().toLocaleDateString("zh-CN");
 }
@@ -558,8 +568,9 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [usageCount, setUsageCount] = useState(0);
+  const [usageLimit, setUsageLimit] = useState(DAILY_LIMIT);
 
-  const remainingCount = Math.max(DAILY_LIMIT - usageCount, 0);
+  const remainingCount = Math.max(usageLimit - usageCount, 0);
   const messageLength = message.length;
   const isMessageTooLong = messageLength > MAX_MESSAGE_LENGTH;
 
@@ -593,7 +604,7 @@ export default function ChatPage() {
 
     const currentUsage = getUsage();
 
-    if (currentUsage >= DAILY_LIMIT) {
+    if (currentUsage >= usageLimit) {
       setError("今日免费次数已用完，请明天再来。");
       setUsageCount(currentUsage);
       return;
@@ -617,17 +628,41 @@ export default function ChatPage() {
         }),
       });
 
-      const data = await res.json();
+      const data: ChatApiResponse = await res.json();
 
       if (!res.ok) {
+        if (res.status === 429) {
+          saveUsage(usageLimit);
+          setUsageCount(usageLimit);
+        }
+
         throw new Error(data?.error || "AI 接口请求失败");
       }
 
       setReply(data.reply || "AI 没有返回内容，请重新试一次。");
 
-      const newUsage = currentUsage + 1;
-      saveUsage(newUsage);
-      setUsageCount(newUsage);
+      const backendUsed = Number(data?.usage?.used);
+      const backendLimit = Number(data?.usage?.limit);
+
+      if (Number.isFinite(backendLimit) && backendLimit > 0) {
+        setUsageLimit(backendLimit);
+      }
+
+      if (Number.isFinite(backendUsed) && backendUsed >= 0) {
+        const safeUsed = Math.min(
+          backendUsed,
+          Number.isFinite(backendLimit) && backendLimit > 0
+            ? backendLimit
+            : usageLimit
+        );
+
+        saveUsage(safeUsed);
+        setUsageCount(safeUsed);
+      } else {
+        const newUsage = currentUsage + 1;
+        saveUsage(newUsage);
+        setUsageCount(newUsage);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "请求失败，请稍后重试。");
     } finally {
@@ -721,7 +756,7 @@ export default function ChatPage() {
               </div>
 
               <div className="mt-1 text-xs text-zinc-500">
-                每日免费使用 {DAILY_LIMIT} 次
+                每日免费使用 {usageLimit} 次
               </div>
 
               <Link
@@ -788,7 +823,7 @@ export default function ChatPage() {
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-zinc-500">
-                  今日剩余免费次数：{remainingCount} / {DAILY_LIMIT}
+                  今日剩余免费次数：{remainingCount} / {usageLimit}
                 </p>
 
                 <p
@@ -826,7 +861,7 @@ export default function ChatPage() {
               <div className="font-bold">今日免费次数已用完</div>
 
               <p className="mt-2 text-sm text-yellow-200/80">
-                免费版每日可使用 {DAILY_LIMIT} 次，明天会自动恢复。后续可升级
+                免费版每日可使用 {usageLimit} 次，明天会自动恢复。后续可升级
                 Pro 套餐获得更多次数。
               </p>
 
