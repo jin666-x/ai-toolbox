@@ -18,6 +18,7 @@ const plans = [
     href: "/chat",
     hot: false,
     disabled: false,
+    status: "当前可用",
   },
   {
     name: "Pro 月卡",
@@ -32,10 +33,11 @@ const plans = [
       "适合自媒体创作",
       "适合销售和广告投放",
     ],
-    button: "即将开放",
-    href: "/chat",
+    button: "加入等待名单",
+    href: "/dashboard",
     hot: true,
-    disabled: true,
+    disabled: false,
+    status: "即将开放",
   },
   {
     name: "Pro 年卡",
@@ -50,17 +52,18 @@ const plans = [
       "适合副业、自媒体、创业者",
       "后续可升级更多权益",
     ],
-    button: "即将开放",
-    href: "/chat",
+    button: "加入等待名单",
+    href: "/dashboard",
     hot: false,
-    disabled: true,
+    disabled: false,
+    status: "即将开放",
   },
 ];
 
 const faqs = [
   {
     q: "现在可以付费购买吗？",
-    a: "当前套餐页面是展示版，支付功能后续开放。现在可以先免费体验 AI 工具箱。",
+    a: "当前套餐页面是展示版，支付功能后续开放。现在可以先免费体验 AI 工具箱，Pro 套餐可先加入等待名单。",
   },
   {
     q: "免费版可以用哪些功能？",
@@ -68,7 +71,7 @@ const faqs = [
   },
   {
     q: "后续 Pro 版会增加什么？",
-    a: "后续 Pro 版会提供更高使用次数、更长内容生成、更多专业工具和会员权益。",
+    a: "后续 Pro 版会提供更高使用次数、更长内容生成、更多专业工具、会员中心和更多权益。",
   },
 ];
 
@@ -86,19 +89,25 @@ export default function PricingPage() {
           <Link href="/" className="hover:text-white">
             首页
           </Link>
+
           <Link href="/chat" className="hover:text-white">
             工具箱
           </Link>
+
           <Link href="/pricing" className="text-white">
             套餐价格
+          </Link>
+
+          <Link href="/dashboard" className="hover:text-white">
+            会员中心
           </Link>
         </nav>
 
         <Link
-          href="/chat"
+          href="/dashboard"
           className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
         >
-          免费体验
+          会员中心
         </Link>
       </header>
 
@@ -119,6 +128,22 @@ export default function PricingPage() {
           先免费体验 AI 工具箱，后续可升级更多次数和高级功能。
           当前套餐页面为展示版，支付功能即将开放。
         </p>
+
+        <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
+          <Link
+            href="/chat"
+            className="rounded-2xl bg-white px-8 py-4 text-lg font-black text-black transition hover:bg-zinc-200"
+          >
+            免费体验
+          </Link>
+
+          <Link
+            href="/dashboard"
+            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
+          >
+            查看会员中心
+          </Link>
+        </div>
       </section>
 
       <section className="relative mx-auto grid max-w-7xl gap-6 px-6 pb-24 md:grid-cols-3">
@@ -131,13 +156,25 @@ export default function PricingPage() {
                 : "border-white/10 bg-white/5"
             }`}
           >
-            {plan.hot && (
-              <div className="absolute right-6 top-6 rounded-full bg-white px-3 py-1 text-xs font-black text-black">
-                推荐
-              </div>
-            )}
+            <div className="absolute right-6 top-6 flex flex-col items-end gap-2">
+              {plan.hot && (
+                <div className="rounded-full bg-white px-3 py-1 text-xs font-black text-black">
+                  推荐
+                </div>
+              )}
 
-            <h2 className="text-3xl font-black">{plan.name}</h2>
+              <div
+                className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                  plan.status === "当前可用"
+                    ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                    : "border-yellow-400/30 bg-yellow-400/10 text-yellow-300"
+                }`}
+              >
+                {plan.status}
+              </div>
+            </div>
+
+            <h2 className="pr-24 text-3xl font-black">{plan.name}</h2>
 
             <p className="mt-4 min-h-14 leading-7 text-zinc-400">
               {plan.desc}
@@ -148,20 +185,21 @@ export default function PricingPage() {
               <div className="pb-2 text-zinc-500">{plan.unit}</div>
             </div>
 
-            {plan.disabled ? (
-              <button
-                disabled
-                className="mt-8 flex w-full cursor-not-allowed items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-6 py-4 font-black text-zinc-400"
-              >
-                {plan.button}
-              </button>
-            ) : (
-              <Link
-                href={plan.href}
-                className="mt-8 flex w-full items-center justify-center rounded-2xl bg-white px-6 py-4 font-black text-black transition hover:bg-zinc-200"
-              >
-                {plan.button}
-              </Link>
+            <Link
+              href={plan.href}
+              className={`mt-8 flex w-full items-center justify-center rounded-2xl px-6 py-4 font-black transition ${
+                plan.hot
+                  ? "bg-white text-black hover:bg-zinc-200"
+                  : "border border-white/10 bg-white/5 text-white hover:bg-white/10"
+              }`}
+            >
+              {plan.button}
+            </Link>
+
+            {plan.status === "即将开放" && (
+              <p className="mt-3 text-center text-xs text-zinc-500">
+                支付功能暂未开放，可先进入会员中心查看权益。
+              </p>
             )}
 
             <div className="mt-8 space-y-4">
@@ -181,26 +219,36 @@ export default function PricingPage() {
           <div className="grid gap-10 md:grid-cols-2 md:items-center">
             <div>
               <div className="mb-4 text-sm font-bold text-blue-400">
-                WHY UPGRADE
+                MEMBER CENTER
               </div>
 
               <h2 className="text-4xl font-black md:text-5xl">
-                先免费体验，
+                会员中心雏形，
                 <br />
-                后续再升级 Pro
+                先把商业框架搭起来
               </h2>
 
               <p className="mt-6 leading-8 text-zinc-400">
-                当前免费版适合先验证产品效果。后续接入登录、会员和支付后，
-                Pro 套餐可以提供更多使用次数、更强生成能力和更多专业工具。
+                后续接入登录、数据库和支付后，会员中心可以展示用户套餐、
+                今日剩余次数、使用记录、订单状态和 Pro 权益。现在先做展示版本，
+                让网站看起来更完整。
               </p>
 
-              <Link
-                href="/chat"
-                className="mt-8 inline-flex rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
-              >
-                免费体验 AI 工具箱
-              </Link>
+              <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
+                >
+                  进入会员中心
+                </Link>
+
+                <Link
+                  href="/chat"
+                  className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
+                >
+                  免费体验工具箱
+                </Link>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -210,13 +258,17 @@ export default function PricingPage() {
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-black/30 p-6">
-                <div className="text-3xl font-black">多工具</div>
-                <div className="mt-2 text-zinc-400">文案、标题、广告、代码一站集成</div>
+                <div className="text-3xl font-black">Pro 权益</div>
+                <div className="mt-2 text-zinc-400">
+                  后续支持更高次数和更多高级功能
+                </div>
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-black/30 p-6">
-                <div className="text-3xl font-black">0 门槛</div>
-                <div className="mt-2 text-zinc-400">不会提示词也能直接使用</div>
+                <div className="text-3xl font-black">等待开放</div>
+                <div className="mt-2 text-zinc-400">
+                  支付、登录、订单和数据库后续接入
+                </div>
               </div>
             </div>
           </div>
@@ -226,7 +278,9 @@ export default function PricingPage() {
       <section className="relative mx-auto max-w-7xl px-6 pb-24">
         <div className="mb-10 text-center">
           <h2 className="text-4xl font-black">常见问题</h2>
-          <p className="mt-4 text-zinc-400">关于套餐和使用次数，你可能想知道这些。</p>
+          <p className="mt-4 text-zinc-400">
+            关于套餐和使用次数，你可能想知道这些。
+          </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -243,7 +297,25 @@ export default function PricingPage() {
       </section>
 
       <footer className="relative border-t border-white/10 px-6 py-8 text-center text-sm text-zinc-500">
-        © 2026 AI Bot Pro. All rights reserved.
+        <div className="mb-4 flex flex-wrap justify-center gap-5">
+          <Link href="/about" className="transition hover:text-white">
+            关于我们
+          </Link>
+
+          <Link href="/privacy" className="transition hover:text-white">
+            隐私政策
+          </Link>
+
+          <Link href="/terms" className="transition hover:text-white">
+            服务条款
+          </Link>
+
+          <Link href="/dashboard" className="transition hover:text-white">
+            会员中心
+          </Link>
+        </div>
+
+        <div>© 2026 AI Bot Pro. All rights reserved.</div>
       </footer>
     </main>
   );
