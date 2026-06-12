@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -386,9 +387,10 @@ export default function ChatPage() {
       <div className="relative mx-auto flex min-h-screen max-w-7xl gap-6 px-6 py-6">
         <aside className="hidden w-72 shrink-0 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl lg:block">
           <div className="mb-8">
-            <div className="mb-2 text-2xl font-black tracking-tight">
+            <Link href="/" className="mb-2 block text-2xl font-black tracking-tight">
               AI ToolBox
-            </div>
+            </Link>
+
             <p className="text-sm leading-6 text-zinc-400">
               一站式 AI 工具箱，帮你快速生成文案、标题、方案和创意内容。
             </p>
@@ -423,17 +425,46 @@ export default function ChatPage() {
             <div className="mb-2 text-sm font-bold text-zinc-200">
               当前状态
             </div>
+
             <div className="flex items-center gap-2 text-sm text-emerald-400">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
               AI 接口已连接
+            </div>
+
+            <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+              <div className="text-xs text-zinc-500">当前版本</div>
+
+              <div className="mt-1 text-sm font-bold text-zinc-200">
+                免费体验版
+              </div>
+
+              <div className="mt-1 text-xs text-zinc-500">
+                每日免费使用 {DAILY_LIMIT} 次
+              </div>
+
+              <Link
+                href="/pricing"
+                className="mt-3 flex w-full items-center justify-center rounded-xl bg-white px-3 py-2 text-xs font-black text-black transition hover:bg-zinc-200"
+              >
+                查看套餐
+              </Link>
             </div>
           </div>
         </aside>
 
         <section className="flex flex-1 flex-col">
           <header className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <div className="mb-3 inline-flex rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-zinc-300">
-              {activeTool.tag}
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <div className="inline-flex rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-zinc-300">
+                {activeTool.tag}
+              </div>
+
+              <Link
+                href="/pricing"
+                className="inline-flex rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-zinc-300 transition hover:bg-white/10 hover:text-white"
+              >
+                套餐价格
+              </Link>
             </div>
 
             <h1 className="text-4xl font-black tracking-tight md:text-5xl">
@@ -485,7 +516,19 @@ export default function ChatPage() {
 
           {remainingCount <= 0 && !error && (
             <div className="mt-5 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-yellow-300">
-              今日免费次数已用完，请明天再来。
+              <div className="font-bold">今日免费次数已用完</div>
+
+              <p className="mt-2 text-sm text-yellow-200/80">
+                免费版每日可使用 {DAILY_LIMIT} 次，明天会自动恢复。后续可升级
+                Pro 套餐获得更多次数。
+              </p>
+
+              <Link
+                href="/pricing"
+                className="mt-4 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200"
+              >
+                查看套餐价格
+              </Link>
             </div>
           )}
 
