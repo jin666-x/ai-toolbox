@@ -58,6 +58,10 @@ export default function DashboardPage() {
             会员中心
           </Link>
 
+          <Link href="/contact" className="hover:text-white">
+            联系我们
+          </Link>
+
           <Link href="/login" className="hover:text-white">
             登录
           </Link>
@@ -65,10 +69,10 @@ export default function DashboardPage() {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/login"
+            href="/contact"
             className="hidden rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
           >
-            登录
+            联系我们
           </Link>
 
           <Link
@@ -121,10 +125,10 @@ export default function DashboardPage() {
           </Link>
 
           <Link
-            href="/login"
+            href="/contact"
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
           >
-            登录账号
+            联系我们
           </Link>
         </div>
       </section>
@@ -240,10 +244,10 @@ export default function DashboardPage() {
             </Link>
 
             <Link
-              href="/login"
+              href="/contact"
               className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
             >
-              登录账号
+              联系我们
             </Link>
 
             <Link
@@ -267,6 +271,10 @@ export default function DashboardPage() {
         <div className="mb-4 flex flex-wrap justify-center gap-5">
           <Link href="/about" className="transition hover:text-white">
             关于我们
+          </Link>
+
+          <Link href="/contact" className="transition hover:text-white">
+            联系我们
           </Link>
 
           <Link href="/privacy" className="transition hover:text-white">
