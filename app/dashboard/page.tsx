@@ -53,14 +53,27 @@ export default function DashboardPage() {
           <Link href="/dashboard" className="text-white">
             会员中心
           </Link>
+
+          <Link href="/login" className="hover:text-white">
+            登录
+          </Link>
         </nav>
 
-        <Link
-          href="/chat"
-          className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-        >
-          免费体验
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="hidden rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
+          >
+            登录
+          </Link>
+
+          <Link
+            href="/chat"
+            className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
+          >
+            免费体验
+          </Link>
+        </div>
       </header>
 
       <section className="relative mx-auto max-w-7xl px-6 pb-12 pt-16 md:pt-24">
@@ -94,6 +107,13 @@ export default function DashboardPage() {
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
           >
             查看套餐价格
+          </Link>
+
+          <Link
+            href="/login"
+            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
+          >
+            登录账号
           </Link>
         </div>
       </section>
@@ -133,12 +153,21 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <Link
-              href="/chat"
-              className="mt-8 inline-flex rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
-            >
-              立即使用
-            </Link>
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+              <Link
+                href="/chat"
+                className="inline-flex justify-center rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
+              >
+                立即使用
+              </Link>
+
+              <Link
+                href="/login"
+                className="inline-flex justify-center rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
+              >
+                登录账号
+              </Link>
+            </div>
           </div>
 
           <div className="rounded-[2rem] border border-blue-400/30 bg-blue-500/10 p-8 backdrop-blur-xl md:p-10">
@@ -161,12 +190,21 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            <Link
-              href="/pricing"
-              className="mt-8 inline-flex rounded-2xl border border-white/10 bg-white/10 px-8 py-4 font-black text-white transition hover:bg-white/20"
-            >
-              查看 Pro 套餐
-            </Link>
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+              <Link
+                href="/pricing"
+                className="inline-flex justify-center rounded-2xl border border-white/10 bg-white/10 px-8 py-4 font-black text-white transition hover:bg-white/20"
+              >
+                查看 Pro 套餐
+              </Link>
+
+              <Link
+                href="/login"
+                className="inline-flex justify-center rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
+              >
+                登录后使用
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -184,8 +222,15 @@ export default function DashboardPage() {
 
           <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
             <Link
-              href="/chat"
+              href="/login"
               className="rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
+            >
+              登录账号
+            </Link>
+
+            <Link
+              href="/chat"
+              className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
             >
               先免费体验
             </Link>
@@ -216,6 +261,14 @@ export default function DashboardPage() {
 
           <Link href="/pricing" className="transition hover:text-white">
             套餐价格
+          </Link>
+
+          <Link href="/dashboard" className="transition hover:text-white">
+            会员中心
+          </Link>
+
+          <Link href="/login" className="transition hover:text-white">
+            登录
           </Link>
         </div>
 
