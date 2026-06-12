@@ -1,292 +1,285 @@
-import Link from "next/link";
+"use client";
 
-const reasons = [
-  {
-    title: "更高使用次数",
-    desc: "Pro 版本后续会提供更高每日生成次数，适合长期使用。",
-  },
-  {
-    title: "更多专业工具",
-    desc: "后续会增加更多适合短视频、营销、办公和开发的 AI 工具。",
-  },
-  {
-    title: "更长内容生成",
-    desc: "支持更长文章、更复杂脚本、更完整方案的生成。",
-  },
-  {
-    title: "优先体验新功能",
-    desc: "等待名单用户后续可优先体验会员、支付、订单和更多新功能。",
-  },
-];
+import Link from "next/link";
+import { FormEvent, useState } from "react";
+
+type WaitlistForm = {
+  name: string;
+  email: string;
+  company: string;
+  plan: string;
+  useCase: string;
+  message: string;
+};
+
+const initialForm: WaitlistForm = {
+  name: "",
+  email: "",
+  company: "",
+  plan: "",
+  useCase: "",
+  message: "",
+};
 
 export default function WaitlistPage() {
+  const [form, setForm] = useState<WaitlistForm>(initialForm);
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  function updateField(key: keyof WaitlistForm, value: string) {
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus({
+          type: "error",
+          message: data.error || "提交失败，请稍后再试。",
+        });
+        return;
+      }
+
+      setStatus({
+        type: "success",
+        message: data.message || "提交成功，我们已经收到你的申请。",
+      });
+
+      setForm(initialForm);
+    } catch {
+      setStatus({
+        type: "error",
+        message: "提交失败，请检查网络后再试。",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.2),transparent_35%)]" />
+    <main className="min-h-screen bg-[#050505] text-white">
+      <section className="relative overflow-hidden border-b border-white/10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.35),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.28),transparent_35%)]" />
 
-      <header className="relative mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <Link href="/" className="text-2xl font-black tracking-tight">
-          AI Bot Pro
-        </Link>
+        <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 py-8 md:px-8 lg:px-10">
+          <nav className="flex flex-wrap items-center justify-between gap-4">
+            <Link href="/" className="text-xl font-black tracking-tight">
+              AI Bot Pro
+            </Link>
 
-        <nav className="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
-          <Link href="/" className="hover:text-white">
-            首页
-          </Link>
-
-          <Link href="/chat" className="hover:text-white">
-            工具箱
-          </Link>
-
-          <Link href="/pricing" className="hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/contact" className="hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/login" className="hover:text-white">
-            登录
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/contact"
-            className="hidden rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
-          >
-            联系我们
-          </Link>
-
-          <Link
-            href="/chat"
-            className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-          >
-            免费体验
-          </Link>
-        </div>
-      </header>
-
-      <section className="relative mx-auto max-w-7xl px-6 pb-20 pt-16 md:pt-24">
-        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-          <div>
-            <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/10 px-5 py-2 text-sm text-zinc-300 backdrop-blur-xl">
-              PRO WAITLIST
-            </div>
-
-            <h1 className="text-5xl font-black leading-tight tracking-tight md:text-7xl">
-              加入 Pro
-              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                {" "}
-                等待名单
-              </span>
-            </h1>
-
-            <p className="mt-8 max-w-2xl text-lg leading-8 text-zinc-400">
-              AI Bot Pro Pro 套餐即将开放。加入等待名单后，后续可以优先体验
-              更高次数、更长内容生成、会员中心、订单系统和更多高级 AI 工具。
-            </p>
-
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <Link
-                href="/chat"
-                className="rounded-2xl bg-white px-8 py-4 text-center text-lg font-black text-black transition hover:bg-zinc-200"
-              >
-                先免费体验
+            <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
+              <Link href="/" className="hover:text-white">
+                首页
               </Link>
-
-              <Link
-                href="/pricing"
-                className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
-              >
-                查看套餐
+              <Link href="/chat" className="hover:text-white">
+                AI 工具
               </Link>
-
-              <Link
-                href="/contact"
-                className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
-              >
+              <Link href="/pricing" className="hover:text-white">
+                套餐价格
+              </Link>
+              <Link href="/dashboard" className="hover:text-white">
+                会员中心
+              </Link>
+              <Link href="/contact" className="hover:text-white">
                 联系我们
               </Link>
             </div>
-          </div>
+          </nav>
 
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
-            <div className="mb-6 text-center">
-              <h2 className="text-3xl font-black">等待名单登记</h2>
+          <div className="grid gap-10 py-12 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+            <div>
+              <div className="mb-5 inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
+                Pro 申请 / 等待名单
+              </div>
 
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                当前是展示版表单，暂未接入数据库。后续接入后可收集邮箱和用户需求。
+              <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-tight md:text-6xl">
+                申请更高额度，
+                <span className="block bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
+                  解锁完整 AI 工具箱。
+                </span>
+              </h1>
+
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
+                如果你需要更高次数、更稳定的使用体验、团队账号或定制功能，可以在这里提交申请。提交后系统会自动发送邮件通知我们。
               </p>
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                  <div className="text-2xl font-black">更高额度</div>
+                  <p className="mt-2 text-sm leading-6 text-white/55">
+                    适合高频使用、批量生成和日常办公。
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                  <div className="text-2xl font-black">团队使用</div>
+                  <p className="mt-2 text-sm leading-6 text-white/55">
+                    适合多人协作、内容团队和运营团队。
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                  <div className="text-2xl font-black">定制能力</div>
+                  <p className="mt-2 text-sm leading-6 text-white/55">
+                    可根据业务场景扩展专属工具。
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-bold text-zinc-300">
-                  邮箱地址
-                </label>
+            <div className="rounded-[2rem] border border-white/10 bg-black/40 p-5 shadow-2xl shadow-purple-950/30 backdrop-blur md:p-7">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-white/75">
+                    你的称呼
+                  </label>
+                  <input
+                    value={form.name}
+                    onChange={(event) => updateField("name", event.target.value)}
+                    placeholder="比如：张先生"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/30"
+                  />
+                </div>
 
-                <input
-                  type="email"
-                  disabled
-                  placeholder="请输入你的邮箱"
-                  className="w-full cursor-not-allowed rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-white outline-none placeholder:text-zinc-600"
-                />
-              </div>
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-white/75">
+                    邮箱地址
+                  </label>
+                  <input
+                    value={form.email}
+                    onChange={(event) =>
+                      updateField("email", event.target.value)
+                    }
+                    placeholder="用于接收后续联系"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/30"
+                  />
+                </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-bold text-zinc-300">
-                  你最想使用的功能
-                </label>
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-white/75">
+                    公司 / 团队名称
+                  </label>
+                  <input
+                    value={form.company}
+                    onChange={(event) =>
+                      updateField("company", event.target.value)
+                    }
+                    placeholder="可选"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/30"
+                  />
+                </div>
 
-                <select
-                  disabled
-                  className="w-full cursor-not-allowed rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-zinc-500 outline-none"
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-white/75">
+                    想了解的套餐
+                  </label>
+                  <select
+                    value={form.plan}
+                    onChange={(event) => updateField("plan", event.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-[#090909] px-5 py-4 text-white outline-none transition focus:border-white/30"
+                  >
+                    <option value="">请选择套餐</option>
+                    <option value="Pro 个人版">Pro 个人版</option>
+                    <option value="团队版">团队版</option>
+                    <option value="企业定制版">企业定制版</option>
+                    <option value="先咨询价格">先咨询价格</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-white/75">
+                    主要使用场景
+                  </label>
+                  <select
+                    value={form.useCase}
+                    onChange={(event) =>
+                      updateField("useCase", event.target.value)
+                    }
+                    className="w-full rounded-2xl border border-white/10 bg-[#090909] px-5 py-4 text-white outline-none transition focus:border-white/30"
+                  >
+                    <option value="">请选择使用场景</option>
+                    <option value="内容创作">内容创作</option>
+                    <option value="营销广告">营销广告</option>
+                    <option value="代码开发">代码开发</option>
+                    <option value="短视频脚本">短视频脚本</option>
+                    <option value="团队办公">团队办公</option>
+                    <option value="其他场景">其他场景</option>
+                  </select>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-4">
+                    <label className="block text-sm font-bold text-white/75">
+                      补充说明
+                    </label>
+                    <span className="text-xs text-white/35">
+                      {form.message.length} / 1000
+                    </span>
+                  </div>
+
+                  <textarea
+                    value={form.message}
+                    onChange={(event) =>
+                      updateField("message", event.target.value.slice(0, 1000))
+                    }
+                    placeholder="比如：预计每天使用多少次、几个人使用、主要做什么内容。"
+                    rows={5}
+                    className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/30"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-2xl bg-white px-6 py-4 text-lg font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <option>请选择功能方向</option>
-                  <option>更多 AI 工具</option>
-                  <option>更高使用次数</option>
-                  <option>更长内容生成</option>
-                  <option>会员支付功能</option>
-                </select>
-              </div>
+                  {loading ? "提交中..." : "提交申请"}
+                </button>
 
-              <button
-                disabled
-                className="w-full cursor-not-allowed rounded-2xl bg-white/20 px-6 py-4 font-black text-zinc-400"
-              >
-                等待名单功能即将开放
-              </button>
+                {status ? (
+                  <div
+                    className={
+                      status.type === "success"
+                        ? "rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm font-bold leading-7 text-emerald-200"
+                        : "rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm font-bold leading-7 text-red-200"
+                    }
+                  >
+                    {status.message}
+                  </div>
+                ) : null}
 
-              <Link
-                href="/contact"
-                className="flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 font-black text-white transition hover:bg-white/10"
-              >
-                先联系我们咨询
-              </Link>
-
-              <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm leading-6 text-yellow-200">
-                目前该页面用于展示商业闭环。后续接入 Supabase 或数据库后，
-                就可以真正收集等待名单用户。
-              </div>
+                <p className="text-center text-xs leading-6 text-white/40">
+                  提交后我们会通过邮件与你联系。也可以直接前往{" "}
+                  <Link href="/contact" className="text-white underline">
+                    联系我们
+                  </Link>
+                  页面留言。
+                </p>
+              </form>
             </div>
           </div>
         </div>
       </section>
-
-      <section className="relative mx-auto max-w-7xl px-6 pb-24">
-        <div className="mb-10 text-center">
-          <h2 className="text-4xl font-black md:text-5xl">
-            Pro 版本适合谁？
-          </h2>
-
-          <p className="mt-5 text-zinc-400">
-            经常需要生成内容、运营账号、写方案、做营销的人，更适合升级 Pro。
-          </p>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {reasons.map((item) => (
-            <div
-              key={item.title}
-              className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/10"
-            >
-              <h3 className="text-2xl font-black">{item.title}</h3>
-              <p className="mt-4 leading-7 text-zinc-400">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="relative mx-auto max-w-7xl px-6 pb-24">
-        <div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-10 text-center backdrop-blur-xl md:p-16">
-          <h2 className="text-4xl font-black md:text-5xl">
-            现在先免费体验，后续再升级
-          </h2>
-
-          <p className="mx-auto mt-6 max-w-2xl leading-8 text-zinc-400">
-            你可以先体验 AI 聊天、爆款文案、标题生成、广告优化、短视频脚本、
-            SEO文章和日报周报等功能。Pro 开放后再升级更多权益。
-          </p>
-
-          <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
-            <Link
-              href="/chat"
-              className="rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
-            >
-              免费体验工具箱
-            </Link>
-
-            <Link
-              href="/contact"
-              className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
-            >
-              联系我们
-            </Link>
-
-            <Link
-              href="/dashboard"
-              className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
-            >
-              查看会员中心
-            </Link>
-
-            <Link
-              href="/"
-              className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
-            >
-              返回首页
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <footer className="relative border-t border-white/10 px-6 py-8 text-center text-sm text-zinc-500">
-        <div className="mb-4 flex flex-wrap justify-center gap-5">
-          <Link href="/about" className="transition hover:text-white">
-            关于我们
-          </Link>
-
-          <Link href="/contact" className="transition hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/privacy" className="transition hover:text-white">
-            隐私政策
-          </Link>
-
-          <Link href="/terms" className="transition hover:text-white">
-            服务条款
-          </Link>
-
-          <Link href="/pricing" className="transition hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="transition hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="transition hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/login" className="transition hover:text-white">
-            登录
-          </Link>
-        </div>
-
-        <div>© 2026 AI Bot Pro. All rights reserved.</div>
-      </footer>
     </main>
   );
 }
