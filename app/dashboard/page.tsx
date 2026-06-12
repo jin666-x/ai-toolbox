@@ -50,6 +50,10 @@ export default function DashboardPage() {
             套餐价格
           </Link>
 
+          <Link href="/waitlist" className="hover:text-white">
+            等待名单
+          </Link>
+
           <Link href="/dashboard" className="text-white">
             会员中心
           </Link>
@@ -107,6 +111,13 @@ export default function DashboardPage() {
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
           >
             查看套餐价格
+          </Link>
+
+          <Link
+            href="/waitlist"
+            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
+          >
+            加入等待名单
           </Link>
 
           <Link
@@ -199,10 +210,10 @@ export default function DashboardPage() {
               </Link>
 
               <Link
-                href="/login"
+                href="/waitlist"
                 className="inline-flex justify-center rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
               >
-                登录后使用
+                加入等待名单
               </Link>
             </div>
           </div>
@@ -222,8 +233,15 @@ export default function DashboardPage() {
 
           <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
             <Link
-              href="/login"
+              href="/waitlist"
               className="rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
+            >
+              加入等待名单
+            </Link>
+
+            <Link
+              href="/login"
+              className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
             >
               登录账号
             </Link>
@@ -261,6 +279,10 @@ export default function DashboardPage() {
 
           <Link href="/pricing" className="transition hover:text-white">
             套餐价格
+          </Link>
+
+          <Link href="/waitlist" className="transition hover:text-white">
+            等待名单
           </Link>
 
           <Link href="/dashboard" className="transition hover:text-white">
