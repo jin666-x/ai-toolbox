@@ -92,17 +92,30 @@ export default function HomePage() {
             套餐价格
           </Link>
 
-          <a href="#start" className="hover:text-white">
-            开始使用
-          </a>
+          <Link href="/dashboard" className="hover:text-white">
+            会员中心
+          </Link>
+
+          <Link href="/login" className="hover:text-white">
+            登录
+          </Link>
         </nav>
 
-        <Link
-          href="/chat"
-          className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-        >
-          免费体验
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="hidden rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
+          >
+            登录
+          </Link>
+
+          <Link
+            href="/chat"
+            className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
+          >
+            免费体验
+          </Link>
+        </div>
       </header>
 
       <section className="relative mx-auto flex max-w-7xl flex-col items-center px-6 pb-20 pt-16 text-center md:pt-24">
@@ -130,6 +143,13 @@ export default function HomePage() {
             className="rounded-2xl bg-white px-8 py-4 text-lg font-black text-black transition hover:bg-zinc-200"
           >
             立即开始使用
+          </Link>
+
+          <Link
+            href="/login"
+            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-bold text-white transition hover:bg-white/10"
+          >
+            登录会员账号
           </Link>
 
           <a
@@ -258,6 +278,13 @@ export default function HomePage() {
             >
               查看套餐价格
             </Link>
+
+            <Link
+              href="/login"
+              className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-10 py-4 text-lg font-black text-white transition hover:bg-white/10"
+            >
+              登录账号
+            </Link>
           </div>
         </div>
       </section>
@@ -278,6 +305,14 @@ export default function HomePage() {
 
           <Link href="/pricing" className="transition hover:text-white">
             套餐价格
+          </Link>
+
+          <Link href="/dashboard" className="transition hover:text-white">
+            会员中心
+          </Link>
+
+          <Link href="/login" className="transition hover:text-white">
+            登录
           </Link>
         </div>
 
