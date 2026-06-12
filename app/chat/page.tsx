@@ -782,6 +782,13 @@ export default function ChatPage() {
                 </Link>
 
                 <Link
+                  href="/contact"
+                  className="flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/10"
+                >
+                  联系我们
+                </Link>
+
+                <Link
                   href="/login"
                   className="flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/10"
                 >
@@ -818,6 +825,13 @@ export default function ChatPage() {
                 className="inline-flex rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-zinc-300 transition hover:bg-white/10 hover:text-white"
               >
                 会员中心
+              </Link>
+
+              <Link
+                href="/contact"
+                className="inline-flex rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-zinc-300 transition hover:bg-white/10 hover:text-white"
+              >
+                联系我们
               </Link>
 
               <Link
@@ -922,6 +936,13 @@ export default function ChatPage() {
                   className="inline-flex rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-5 py-3 text-sm font-black text-yellow-100 transition hover:bg-yellow-400/20"
                 >
                   加入等待名单
+                </Link>
+
+                <Link
+                  href="/contact"
+                  className="inline-flex rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-5 py-3 text-sm font-black text-yellow-100 transition hover:bg-yellow-400/20"
+                >
+                  联系我们
                 </Link>
 
                 <Link
