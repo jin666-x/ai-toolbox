@@ -46,6 +46,46 @@ const tools = [
     placeholder: "把你的代码、报错、需求粘贴进来...",
     example: "帮我解释一下 Next.js 里面 app/page.tsx 是干嘛的",
   },
+  {
+    id: "script",
+    name: "短视频脚本",
+    tag: "视频创作",
+    desc: "输入主题，自动生成短视频分镜、口播和结尾引导。",
+    placeholder: "输入视频主题，例如：AI工具箱、咖啡店探店、副业赚钱...",
+    example: "AI工具箱",
+  },
+  {
+    id: "moments",
+    name: "朋友圈文案",
+    tag: "私域文案",
+    desc: "生成适合朋友圈、社群、私域转化的文案。",
+    placeholder: "输入产品或主题，例如：AI工具箱、免费CDN、课程推广...",
+    example: "AI工具箱",
+  },
+  {
+    id: "seo",
+    name: "SEO文章",
+    tag: "搜索优化",
+    desc: "生成适合网站、公众号、博客的结构化文章。",
+    placeholder: "输入文章主题，例如：AI工具箱有什么用、如何提高效率...",
+    example: "AI工具箱有什么用",
+  },
+  {
+    id: "report",
+    name: "日报周报",
+    tag: "办公效率",
+    desc: "快速生成工作日报、周报、项目总结。",
+    placeholder: "输入工作内容，例如：今天做了网站首页、套餐页、AI工具箱...",
+    example: "今天完成了AI工具箱首页、聊天页和套餐页优化",
+  },
+  {
+    id: "rewrite",
+    name: "翻译润色",
+    tag: "文本优化",
+    desc: "帮你润色、改写、翻译、优化表达。",
+    placeholder: "粘贴需要润色或翻译的内容...",
+    example: "这个AI工具箱可以帮助用户快速生成文案和标题",
+  },
 ];
 
 const DAILY_LIMIT = 5;
@@ -230,6 +270,215 @@ ${userInput}
 `;
   }
 
+  if (toolId === "script") {
+    return `
+当前工具：短视频脚本生成器
+
+用户输入的主题是：
+${userInput}
+
+请不要反问用户，直接生成一条适合短视频发布的脚本。
+
+你必须严格按照下面 Markdown 格式输出：
+
+## 短视频脚本方案
+
+### 视频标题
+- **标题：**
+
+### 开头 3 秒钩子
+- **钩子文案：**
+
+### 口播脚本
+- **第一段：**
+- **第二段：**
+- **第三段：**
+
+### 分镜建议
+1. **镜头1：**
+2. **镜头2：**
+3. **镜头3：**
+
+### 结尾引导
+- **引导关注：**
+- **引导评论：**
+
+要求：
+- 适合抖音、小红书、视频号
+- 语言要自然，有代入感
+- 不要输出一大段纯文字
+- 必须有标题、加粗、列表
+`;
+  }
+
+  if (toolId === "moments") {
+    return `
+当前工具：朋友圈文案生成器
+
+用户输入的主题是：
+${userInput}
+
+请不要反问用户，直接生成适合朋友圈发布的文案。
+
+你必须严格按照下面 Markdown 格式输出：
+
+## 朋友圈文案方案
+
+### 真实分享版
+- **文案：**
+- **适合人群：**
+
+### 成交转化版
+- **文案：**
+- **适合人群：**
+
+### 轻松种草版
+- **文案：**
+- **适合人群：**
+
+### 配图建议
+- **图片方向1：**
+- **图片方向2：**
+- **图片方向3：**
+
+要求：
+- 不要太像广告
+- 要像真人发朋友圈
+- 适合私域、社群、朋友圈使用
+- 不要输出一大段纯文字
+`;
+  }
+
+  if (toolId === "seo") {
+    return `
+当前工具：SEO文章生成器
+
+用户输入的文章主题是：
+${userInput}
+
+请不要反问用户，直接生成一篇结构清晰的 SEO 文章。
+
+你必须严格按照下面 Markdown 格式输出：
+
+## SEO文章标题
+
+### 文章摘要
+- **核心内容：**
+
+### 正文大纲
+1. **第一部分：**
+2. **第二部分：**
+3. **第三部分：**
+
+### 正文内容
+
+#### 第一部分
+- 内容：
+
+#### 第二部分
+- 内容：
+
+#### 第三部分
+- 内容：
+
+### SEO关键词建议
+- **关键词1：**
+- **关键词2：**
+- **关键词3：**
+
+### 适合发布平台
+- 网站
+- 公众号
+- 博客
+- 百家号
+
+要求：
+- 文章结构清晰
+- 适合搜索收录
+- 不要堆砌关键词
+- 不要输出一大段纯文字
+`;
+  }
+
+  if (toolId === "report") {
+    return `
+当前工具：日报周报生成器
+
+用户输入的工作内容是：
+${userInput}
+
+请不要反问用户，直接整理成专业的工作汇报。
+
+你必须严格按照下面 Markdown 格式输出：
+
+## 工作汇报
+
+### 今日完成
+- **事项1：**
+- **事项2：**
+- **事项3：**
+
+### 工作成果
+- **成果1：**
+- **成果2：**
+
+### 遇到的问题
+- **问题1：**
+- **问题2：**
+
+### 明日计划
+- **计划1：**
+- **计划2：**
+- **计划3：**
+
+### 汇报总结
+- **总结：**
+
+要求：
+- 表达要正式
+- 适合发给老板、主管、客户
+- 自动把口语内容整理成专业表达
+- 不要输出一大段纯文字
+`;
+  }
+
+  if (toolId === "rewrite") {
+    return `
+当前工具：翻译润色助手
+
+用户输入的内容是：
+${userInput}
+
+请不要反问用户，直接对内容进行优化。
+
+你必须严格按照下面 Markdown 格式输出：
+
+## 文本优化结果
+
+### 原文问题
+- **问题1：**
+- **问题2：**
+
+### 润色版本
+- **版本：**
+
+### 更自然版本
+- **版本：**
+
+### 更专业版本
+- **版本：**
+
+### 可选英文翻译
+- **English：**
+
+要求：
+- 保留原意
+- 表达更自然
+- 适合发布、沟通、办公使用
+- 不要输出一大段纯文字
+`;
+  }
+
   if (toolId === "code") {
     return `
 当前工具：代码助手
@@ -385,9 +634,12 @@ export default function ChatPage() {
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.22),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.18),transparent_35%)]" />
 
       <div className="relative mx-auto flex min-h-screen max-w-7xl gap-6 px-6 py-6">
-        <aside className="hidden w-72 shrink-0 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl lg:block">
+        <aside className="hidden h-[calc(100vh-3rem)] w-72 shrink-0 overflow-y-auto rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl lg:block">
           <div className="mb-8">
-            <Link href="/" className="mb-2 block text-2xl font-black tracking-tight">
+            <Link
+              href="/"
+              className="mb-2 block text-2xl font-black tracking-tight"
+            >
               AI ToolBox
             </Link>
 
@@ -474,7 +726,7 @@ export default function ChatPage() {
             <p className="mt-4 max-w-2xl text-zinc-400">{activeTool.desc}</p>
           </header>
 
-          <div className="mb-4 grid gap-3 md:grid-cols-5 lg:hidden">
+          <div className="mb-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:hidden">
             {tools.map((tool) => (
               <button
                 key={tool.id}
