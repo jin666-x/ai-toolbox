@@ -89,6 +89,7 @@ const tools = [
 ];
 
 const DAILY_LIMIT = 5;
+const MAX_MESSAGE_LENGTH = 2000;
 const USAGE_KEY = "ai_bot_pro_daily_usage";
 
 function getToday() {
@@ -559,6 +560,8 @@ export default function ChatPage() {
   const [usageCount, setUsageCount] = useState(0);
 
   const remainingCount = Math.max(DAILY_LIMIT - usageCount, 0);
+  const messageLength = message.length;
+  const isMessageTooLong = messageLength > MAX_MESSAGE_LENGTH;
 
   useEffect(() => {
     setUsageCount(getUsage());
@@ -582,6 +585,11 @@ export default function ChatPage() {
 
   async function sendMessage() {
     if (!message.trim() || loading) return;
+
+    if (isMessageTooLong) {
+      setError(`输入内容太长了，最多只能输入 ${MAX_MESSAGE_LENGTH} 个字。`);
+      return;
+    }
 
     const currentUsage = getUsage();
 
@@ -769,23 +777,48 @@ export default function ChatPage() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="h-44 w-full resize-none rounded-3xl border border-white/10 bg-black/40 p-6 text-base leading-7 text-white outline-none placeholder:text-zinc-500 focus:border-white/30"
+              className={`h-44 w-full resize-none rounded-3xl border bg-black/40 p-6 text-base leading-7 text-white outline-none placeholder:text-zinc-500 ${
+                isMessageTooLong
+                  ? "border-red-500/60 focus:border-red-500"
+                  : "border-white/10 focus:border-white/30"
+              }`}
               placeholder={activeTool.placeholder}
             />
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-zinc-500">
-                今日剩余免费次数：{remainingCount} / {DAILY_LIMIT}
-              </p>
+              <div>
+                <p className="text-sm text-zinc-500">
+                  今日剩余免费次数：{remainingCount} / {DAILY_LIMIT}
+                </p>
+
+                <p
+                  className={`mt-1 text-sm ${
+                    isMessageTooLong ? "text-red-400" : "text-zinc-500"
+                  }`}
+                >
+                  已输入 {messageLength} / {MAX_MESSAGE_LENGTH}
+                </p>
+              </div>
 
               <button
                 onClick={sendMessage}
-                disabled={loading || !message.trim() || remainingCount <= 0}
+                disabled={
+                  loading ||
+                  !message.trim() ||
+                  remainingCount <= 0 ||
+                  isMessageTooLong
+                }
                 className="rounded-2xl bg-white px-8 py-3 font-bold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? "生成中..." : "发送消息"}
               </button>
             </div>
+
+            {isMessageTooLong && (
+              <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
+                输入内容太长了，免费版每次最多输入 {MAX_MESSAGE_LENGTH} 个字，请精简后再发送。
+              </div>
+            )}
           </div>
 
           {remainingCount <= 0 && !error && (
