@@ -44,6 +44,10 @@ export default function ErrorPage({
             会员中心
           </Link>
 
+          <Link href="/contact" className="hover:text-white">
+            联系我们
+          </Link>
+
           <Link href="/login" className="hover:text-white">
             登录
           </Link>
@@ -72,7 +76,7 @@ export default function ErrorPage({
 
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
           当前页面暂时无法正常加载，可能是接口异常、网络波动或页面代码错误。
-          你可以重新尝试加载，或者返回首页继续使用其他功能。
+          你可以重新尝试加载，返回首页，或者联系我们反馈问题。
         </p>
 
         <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
@@ -91,31 +95,31 @@ export default function ErrorPage({
           </Link>
 
           <Link
-            href="/chat"
+            href="/contact"
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
           >
-            进入工具箱
+            联系我们
           </Link>
         </div>
 
         <div className="mt-12 grid w-full gap-4 text-left md:grid-cols-3">
           <Link
-            href="/pricing"
+            href="/chat"
             className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/10"
           >
-            <div className="text-2xl font-black">套餐价格</div>
+            <div className="text-2xl font-black">AI 工具箱</div>
             <p className="mt-3 leading-7 text-zinc-400">
-              查看免费版和 Pro 版本权益。
+              返回工具箱，继续使用文案、标题、脚本和办公工具。
             </p>
           </Link>
 
           <Link
-            href="/waitlist"
+            href="/contact"
             className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/10"
           >
-            <div className="text-2xl font-black">等待名单</div>
+            <div className="text-2xl font-black">联系我们</div>
             <p className="mt-3 leading-7 text-zinc-400">
-              Pro 功能开放后优先体验。
+              页面异常、功能建议、产品咨询，都可以从这里反馈。
             </p>
           </Link>
 
@@ -135,6 +139,10 @@ export default function ErrorPage({
         <div className="mb-4 flex flex-wrap justify-center gap-5">
           <Link href="/about" className="transition hover:text-white">
             关于我们
+          </Link>
+
+          <Link href="/contact" className="transition hover:text-white">
+            联系我们
           </Link>
 
           <Link href="/privacy" className="transition hover:text-white">
