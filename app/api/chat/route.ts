@@ -1,51 +1,30 @@
 import OpenAI from "openai";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-const DAILY_LIMIT = 5;
 const MAX_MESSAGE_LENGTH = 2000;
 
-type UsageRecord = {
+const ANONYMOUS_DAILY_LIMIT = 5;
+const LOGIN_DAILY_LIMIT = 10;
+
+type AnonymousUsageRecord = {
   date: string;
   count: number;
 };
 
-const ipUsageMap = new Map<string, UsageRecord>();
+const anonymousUsageMap = new Map<string, AnonymousUsageRecord>();
 
-const toolPrompts: Record<string, string> = {
-  chat: "你是 AI Bot Pro 的智能助手。你要用简洁、清晰、实用的方式回答用户问题，适合中文用户使用。",
+const openai = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: "https://api.deepseek.com",
+});
 
-  copy: "你是一个短视频爆款文案专家，擅长抖音、小红书、朋友圈文案。你要帮用户生成有吸引力、有情绪、有点击欲望的文案。内容要接地气，不要太像AI。",
-
-  title: "你是一个爆款标题生成专家，擅长生成抖音、小红书、公众号、广告标题。标题要短、有冲突感、有好奇心、有点击欲望。",
-
-  ad: "你是一个广告转化优化专家，擅长把普通广告词优化得更有吸引力、更有销售感、更适合投放。输出多个版本供用户选择。",
-
-  code: "你是一个代码助手，擅长解释报错、修改前端页面、优化代码。你要尽量用小白能看懂的话解释，并给出可以直接复制使用的代码。",
-
-  script: "你是一个短视频脚本专家，擅长生成短视频标题、开头钩子、口播脚本、分镜建议和结尾引导。内容要适合抖音、小红书、视频号。",
-
-  moments: "你是一个朋友圈文案专家，擅长生成自然、不生硬、适合朋友圈和私域转化的文案。文案要像真人发的，不要太像广告。",
-
-  seo: "你是一个 SEO 文章写作专家，擅长生成适合网站、公众号、博客发布的结构化文章。文章要清晰、有层次、适合搜索收录。",
-
-  report: "你是一个办公汇报助手，擅长把用户输入的零散工作内容整理成正式的日报、周报、项目总结。表达要专业、清楚、适合发给老板或客户。",
-
-  rewrite: "你是一个文本润色和翻译助手，擅长改写、润色、优化表达和翻译。你要保留原意，让表达更自然、更专业。",
-};
-
-function getToday() {
-  return new Date().toLocaleDateString("zh-CN", {
-    timeZone: "Asia/Shanghai",
-  });
+function getTodayDate() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function getClientIp(req: Request) {
   const forwardedFor = req.headers.get("x-forwarded-for");
   const realIp = req.headers.get("x-real-ip");
-  const cfIp = req.headers.get("cf-connecting-ip");
-
-  if (cfIp) {
-    return cfIp;
-  }
 
   if (forwardedFor) {
     return forwardedFor.split(",")[0]?.trim() || "unknown";
@@ -58,28 +37,41 @@ function getClientIp(req: Request) {
   return "unknown";
 }
 
-function getIpUsage(ip: string) {
-  const today = getToday();
-  const record = ipUsageMap.get(ip);
+function getAnonymousUsage(req: Request) {
+  const today = getTodayDate();
+  const ip = getClientIp(req);
+  const key = `${ip}:${today}`;
+
+  const record = anonymousUsageMap.get(key);
 
   if (!record || record.date !== today) {
-    ipUsageMap.set(ip, {
+    anonymousUsageMap.set(key, {
       date: today,
       count: 0,
     });
 
-    return 0;
+    return {
+      key,
+      used: 0,
+      limit: ANONYMOUS_DAILY_LIMIT,
+      remaining: ANONYMOUS_DAILY_LIMIT,
+    };
   }
 
-  return record.count;
+  return {
+    key,
+    used: record.count,
+    limit: ANONYMOUS_DAILY_LIMIT,
+    remaining: Math.max(ANONYMOUS_DAILY_LIMIT - record.count, 0),
+  };
 }
 
-function increaseIpUsage(ip: string) {
-  const today = getToday();
-  const current = ipUsageMap.get(ip);
+function increaseAnonymousUsage(key: string) {
+  const today = getTodayDate();
+  const record = anonymousUsageMap.get(key);
 
-  if (!current || current.date !== today) {
-    ipUsageMap.set(ip, {
+  if (!record || record.date !== today) {
+    anonymousUsageMap.set(key, {
       date: today,
       count: 1,
     });
@@ -87,9 +79,9 @@ function increaseIpUsage(ip: string) {
     return 1;
   }
 
-  const nextCount = current.count + 1;
+  const nextCount = record.count + 1;
 
-  ipUsageMap.set(ip, {
+  anonymousUsageMap.set(key, {
     date: today,
     count: nextCount,
   });
@@ -97,137 +89,209 @@ function increaseIpUsage(ip: string) {
   return nextCount;
 }
 
+async function getLoginUser(req: Request) {
+  const authorization = req.headers.get("authorization");
+
+  if (!authorization || !authorization.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const accessToken = authorization.replace("Bearer ", "").trim();
+
+  if (!accessToken) {
+    return null;
+  }
+
+  const supabase = createAdminClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(accessToken);
+
+  if (error || !user) {
+    return null;
+  }
+
+  return user;
+}
+
+async function getUserUsage(userId: string) {
+  const supabase = createAdminClient();
+  const today = getTodayDate();
+
+  const { data, error } = await supabase
+    .from("user_daily_usage")
+    .select("used_count")
+    .eq("user_id", userId)
+    .eq("usage_date", today)
+    .maybeSingle();
+
+  if (error) {
+    console.error("读取用户使用次数失败：", error);
+    throw new Error("读取用户使用次数失败。");
+  }
+
+  const used = data?.used_count || 0;
+
+  return {
+    userId,
+    date: today,
+    used,
+    limit: LOGIN_DAILY_LIMIT,
+    remaining: Math.max(LOGIN_DAILY_LIMIT - used, 0),
+  };
+}
+
+async function increaseUserUsage(userId: string, currentUsed: number) {
+  const supabase = createAdminClient();
+  const today = getTodayDate();
+  const nextUsed = currentUsed + 1;
+
+  const { error } = await supabase.from("user_daily_usage").upsert(
+    {
+      user_id: userId,
+      usage_date: today,
+      used_count: nextUsed,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "user_id,usage_date",
+    }
+  );
+
+  if (error) {
+    console.error("更新用户使用次数失败：", error);
+    throw new Error("更新用户使用次数失败。");
+  }
+
+  return nextUsed;
+}
+
 export async function POST(req: Request) {
   try {
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-
-    if (!apiKey) {
+    if (!process.env.DEEPSEEK_API_KEY) {
       return Response.json(
-        {
-          error: "服务器未配置 DEEPSEEK_API_KEY，请检查 .env.local 文件。",
-        },
+        { error: "服务器未配置 DEEPSEEK_API_KEY。" },
         { status: 500 }
       );
     }
 
-    const ip = getClientIp(req);
-    const currentUsage = getIpUsage(ip);
+    const body = await req.json();
+    const message = String(body.message || "").trim();
 
-    if (currentUsage >= DAILY_LIMIT) {
-      return Response.json(
-        {
-          error: `今日免费次数已用完。免费版每天最多使用 ${DAILY_LIMIT} 次，请明天再来。`,
-        },
-        { status: 429 }
-      );
+    if (!message) {
+      return Response.json({ error: "请输入内容。" }, { status: 400 });
     }
 
-    const body = await req.json().catch(() => null);
-    const message = body?.message;
-    const tool = body?.tool || "chat";
-
-    if (!message || typeof message !== "string" || !message.trim()) {
+    if (message.length > MAX_MESSAGE_LENGTH) {
       return Response.json(
-        {
-          error: "请输入有效的问题内容。",
-        },
+        { error: `内容太长了，最多 ${MAX_MESSAGE_LENGTH} 个字符。` },
         { status: 400 }
       );
     }
 
-    const cleanMessage = message.trim();
+    const loginUser = await getLoginUser(req);
 
-    if (cleanMessage.length > MAX_MESSAGE_LENGTH) {
-      return Response.json(
-        {
-          error: `输入内容太长了，免费版每次最多输入 ${MAX_MESSAGE_LENGTH} 个字，请精简后再试。`,
-        },
-        { status: 400 }
-      );
+    let usageType: "login" | "anonymous" = "anonymous";
+    let usageKey = "";
+    let userId = "";
+    let used = 0;
+    let limit = ANONYMOUS_DAILY_LIMIT;
+
+    if (loginUser) {
+      usageType = "login";
+      userId = loginUser.id;
+
+      const userUsage = await getUserUsage(loginUser.id);
+
+      used = userUsage.used;
+      limit = userUsage.limit;
+
+      if (used >= limit) {
+        return Response.json(
+          {
+            error: "你今天的登录账号免费次数已经用完。",
+            usage: {
+              type: "login",
+              used,
+              limit,
+              remaining: 0,
+            },
+          },
+          { status: 429 }
+        );
+      }
+    } else {
+      const anonymousUsage = getAnonymousUsage(req);
+
+      usageKey = anonymousUsage.key;
+      used = anonymousUsage.used;
+      limit = anonymousUsage.limit;
+
+      if (used >= limit) {
+        return Response.json(
+          {
+            error: "你今天的免费体验次数已经用完，请登录账号或申请 Pro。",
+            usage: {
+              type: "anonymous",
+              used,
+              limit,
+              remaining: 0,
+            },
+          },
+          { status: 429 }
+        );
+      }
     }
 
-    const client = new OpenAI({
-      apiKey,
-      baseURL: "https://api.deepseek.com",
-    });
-
-    const completion = await client.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: "deepseek-chat",
       messages: [
         {
           role: "system",
-          content: toolPrompts[tool] || toolPrompts.chat,
+          content:
+            "你是 AI Bot Pro 的智能助手，请用清晰、实用、适合中文用户的方式回答。",
         },
         {
           role: "user",
-          content: cleanMessage,
+          content: message,
         },
       ],
-      temperature: tool === "code" ? 0.4 : 0.8,
-      max_tokens: 1500,
+      temperature: 0.7,
     });
 
-    const reply = completion.choices?.[0]?.message?.content;
+    const reply = completion.choices[0]?.message?.content?.trim();
 
     if (!reply) {
       return Response.json(
-        {
-          error: "AI 没有返回内容，请重新试一次。",
-        },
-        { status: 502 }
+        { error: "AI 暂时没有返回内容，请稍后再试。" },
+        { status: 500 }
       );
     }
 
-    const used = increaseIpUsage(ip);
+    let nextUsed = used + 1;
+
+    if (usageType === "login" && userId) {
+      nextUsed = await increaseUserUsage(userId, used);
+    } else {
+      nextUsed = increaseAnonymousUsage(usageKey);
+    }
 
     return Response.json({
       reply,
       usage: {
-        used,
-        limit: DAILY_LIMIT,
-        remaining: Math.max(DAILY_LIMIT - used, 0),
+        type: usageType,
+        used: nextUsed,
+        limit,
+        remaining: Math.max(limit - nextUsed, 0),
       },
     });
-  } catch (error: unknown) {
-    console.error("Chat API Error:", error);
-
-    const err = error as {
-      message?: string;
-      status?: number;
-      error?: {
-        message?: string;
-      };
-    };
-
-    const rawMessage = err?.error?.message || err?.message || "";
-
-    let friendlyMessage = "AI 接口请求失败，请稍后重试。";
-
-    if (rawMessage.includes("Insufficient Balance")) {
-      friendlyMessage = "DeepSeek 余额不足，请先充值后再使用。";
-    }
-
-    if (
-      rawMessage.includes("401") ||
-      rawMessage.toLowerCase().includes("api key") ||
-      rawMessage.toLowerCase().includes("authentication")
-    ) {
-      friendlyMessage = "API Key 无效，请检查 DEEPSEEK_API_KEY 是否正确。";
-    }
-
-    if (
-      rawMessage.toLowerCase().includes("rate limit") ||
-      rawMessage.includes("429")
-    ) {
-      friendlyMessage = "请求太频繁了，请稍后再试。";
-    }
+  } catch (error) {
+    console.error("AI 接口错误：", error);
 
     return Response.json(
-      {
-        error: friendlyMessage,
-        detail:
-          process.env.NODE_ENV === "development" ? rawMessage : undefined,
-      },
+      { error: "AI 服务暂时异常，请稍后再试。" },
       { status: 500 }
     );
   }

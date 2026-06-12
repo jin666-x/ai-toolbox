@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { createClient } from "@/lib/supabase/client";
 
 const tools = [
   {
@@ -89,6 +90,7 @@ const tools = [
 ];
 
 const DAILY_LIMIT = 5;
+const LOGIN_DAILY_LIMIT = 10;
 const MAX_MESSAGE_LENGTH = 2000;
 const USAGE_KEY = "ai_bot_pro_daily_usage";
 
@@ -96,6 +98,7 @@ type ChatApiResponse = {
   reply?: string;
   error?: string;
   usage?: {
+    type?: "login" | "anonymous";
     used?: number;
     limit?: number;
     remaining?: number;
@@ -562,6 +565,8 @@ ${userInput}
 }
 
 export default function ChatPage() {
+  const supabase = useMemo(() => createClient(), []);
+
   const [activeTool, setActiveTool] = useState(tools[0]);
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState("");
@@ -569,30 +574,72 @@ export default function ChatPage() {
   const [error, setError] = useState("");
   const [usageCount, setUsageCount] = useState(0);
   const [usageLimit, setUsageLimit] = useState(DAILY_LIMIT);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const remainingCount = Math.max(usageLimit - usageCount, 0);
   const messageLength = message.length;
   const isMessageTooLong = messageLength > MAX_MESSAGE_LENGTH;
 
   useEffect(() => {
-    setUsageCount(getUsage());
+    let mounted = true;
 
-    const params = new URLSearchParams(window.location.search);
-    const toolId = params.get("tool");
+    async function initPage() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!toolId) {
-      return;
+      if (!mounted) return;
+
+      if (session?.access_token) {
+        setIsLoggedIn(true);
+        setUsageLimit(LOGIN_DAILY_LIMIT);
+        setUsageCount(0);
+      } else {
+        setIsLoggedIn(false);
+        setUsageLimit(DAILY_LIMIT);
+        setUsageCount(getUsage());
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const toolId = params.get("tool");
+
+      if (!toolId) {
+        return;
+      }
+
+      const foundTool = tools.find((tool) => tool.id === toolId);
+
+      if (foundTool) {
+        setActiveTool(foundTool);
+        setMessage("");
+        setReply("");
+        setError("");
+      }
     }
 
-    const foundTool = tools.find((tool) => tool.id === toolId);
+    initPage();
 
-    if (foundTool) {
-      setActiveTool(foundTool);
-      setMessage("");
-      setReply("");
-      setError("");
-    }
-  }, []);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+
+      if (session?.access_token) {
+        setIsLoggedIn(true);
+        setUsageLimit(LOGIN_DAILY_LIMIT);
+        setUsageCount(0);
+      } else {
+        setIsLoggedIn(false);
+        setUsageLimit(DAILY_LIMIT);
+        setUsageCount(getUsage());
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   async function sendMessage() {
     if (!message.trim() || loading) return;
@@ -602,26 +649,40 @@ export default function ChatPage() {
       return;
     }
 
-    const currentUsage = getUsage();
-
-    if (currentUsage >= usageLimit) {
-      setError("今日免费次数已用完，请明天再来。");
-      setUsageCount(currentUsage);
-      return;
-    }
-
     setLoading(true);
     setReply("");
     setError("");
 
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const loggedIn = Boolean(session?.access_token);
+      setIsLoggedIn(loggedIn);
+
+      const currentUsage = loggedIn ? usageCount : getUsage();
+
+      if (!loggedIn && currentUsage >= usageLimit) {
+        setError("今日免费次数已用完，请登录账号或明天再来。");
+        setUsageCount(currentUsage);
+        setLoading(false);
+        return;
+      }
+
       const finalMessage = buildFinalPrompt(activeTool.id, message.trim());
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
 
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           tool: activeTool.id,
           message: finalMessage,
@@ -631,9 +692,20 @@ export default function ChatPage() {
       const data: ChatApiResponse = await res.json();
 
       if (!res.ok) {
-        if (res.status === 429) {
-          saveUsage(usageLimit);
-          setUsageCount(usageLimit);
+        const backendUsed = Number(data?.usage?.used);
+        const backendLimit = Number(data?.usage?.limit);
+        const backendType = data?.usage?.type;
+
+        if (Number.isFinite(backendLimit) && backendLimit > 0) {
+          setUsageLimit(backendLimit);
+        }
+
+        if (Number.isFinite(backendUsed) && backendUsed >= 0) {
+          setUsageCount(backendUsed);
+
+          if (backendType === "anonymous") {
+            saveUsage(backendUsed);
+          }
         }
 
         throw new Error(data?.error || "AI 接口请求失败");
@@ -643,25 +715,33 @@ export default function ChatPage() {
 
       const backendUsed = Number(data?.usage?.used);
       const backendLimit = Number(data?.usage?.limit);
+      const backendType = data?.usage?.type;
 
       if (Number.isFinite(backendLimit) && backendLimit > 0) {
         setUsageLimit(backendLimit);
       }
 
       if (Number.isFinite(backendUsed) && backendUsed >= 0) {
-        const safeUsed = Math.min(
-          backendUsed,
+        const safeLimit =
           Number.isFinite(backendLimit) && backendLimit > 0
             ? backendLimit
-            : usageLimit
-        );
+            : usageLimit;
 
-        saveUsage(safeUsed);
+        const safeUsed = Math.min(backendUsed, safeLimit);
+
         setUsageCount(safeUsed);
+
+        if (backendType === "anonymous") {
+          saveUsage(safeUsed);
+        }
       } else {
         const newUsage = currentUsage + 1;
-        saveUsage(newUsage);
+
         setUsageCount(newUsage);
+
+        if (!loggedIn) {
+          saveUsage(newUsage);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "请求失败，请稍后重试。");
@@ -752,11 +832,11 @@ export default function ChatPage() {
               <div className="text-xs text-zinc-500">当前版本</div>
 
               <div className="mt-1 text-sm font-bold text-zinc-200">
-                免费体验版
+                {isLoggedIn ? "登录账号版" : "免费体验版"}
               </div>
 
               <div className="mt-1 text-xs text-zinc-500">
-                每日免费使用 {usageLimit} 次
+                {isLoggedIn ? "登录账号每日使用" : "每日免费使用"} {usageLimit} 次
               </div>
 
               <div className="mt-3 grid gap-2">
@@ -792,7 +872,7 @@ export default function ChatPage() {
                   href="/login"
                   className="flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/10"
                 >
-                  登录账号
+                  {isLoggedIn ? "账号已登录" : "登录账号"}
                 </Link>
               </div>
             </div>
@@ -838,7 +918,7 @@ export default function ChatPage() {
                 href="/login"
                 className="inline-flex rounded-full border border-white/10 bg-white px-4 py-2 text-sm font-black text-black transition hover:bg-zinc-200"
               >
-                登录
+                {isLoggedIn ? "已登录" : "登录"}
               </Link>
             </div>
 
@@ -881,7 +961,8 @@ export default function ChatPage() {
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-zinc-500">
-                  今日剩余免费次数：{remainingCount} / {usageLimit}
+                  {isLoggedIn ? "登录账号剩余次数" : "今日剩余免费次数"}：
+                  {remainingCount} / {usageLimit}
                 </p>
 
                 <p
@@ -916,10 +997,12 @@ export default function ChatPage() {
 
           {remainingCount <= 0 && !error && (
             <div className="mt-5 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-yellow-300">
-              <div className="font-bold">今日免费次数已用完</div>
+              <div className="font-bold">
+                {isLoggedIn ? "今日账号次数已用完" : "今日免费次数已用完"}
+              </div>
 
               <p className="mt-2 text-sm text-yellow-200/80">
-                免费版每日可使用 {usageLimit} 次，明天会自动恢复。后续可升级
+                当前每日可使用 {usageLimit} 次，明天会自动恢复。后续可升级
                 Pro 套餐获得更多次数。
               </p>
 
@@ -945,12 +1028,14 @@ export default function ChatPage() {
                   联系我们
                 </Link>
 
-                <Link
-                  href="/login"
-                  className="inline-flex rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-5 py-3 text-sm font-black text-yellow-100 transition hover:bg-yellow-400/20"
-                >
-                  登录账号
-                </Link>
+                {!isLoggedIn && (
+                  <Link
+                    href="/login"
+                    className="inline-flex rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-5 py-3 text-sm font-black text-yellow-100 transition hover:bg-yellow-400/20"
+                  >
+                    登录账号
+                  </Link>
+                )}
               </div>
             </div>
           )}
