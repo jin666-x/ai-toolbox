@@ -705,7 +705,7 @@ export default function ChatPage() {
               href="/"
               className="mb-2 block text-2xl font-black tracking-tight"
             >
-              AI ToolBox
+              AI Bot Pro
             </Link>
 
             <p className="text-sm leading-6 text-zinc-400">
@@ -759,12 +759,35 @@ export default function ChatPage() {
                 每日免费使用 {usageLimit} 次
               </div>
 
-              <Link
-                href="/pricing"
-                className="mt-3 flex w-full items-center justify-center rounded-xl bg-white px-3 py-2 text-xs font-black text-black transition hover:bg-zinc-200"
-              >
-                查看套餐
-              </Link>
+              <div className="mt-3 grid gap-2">
+                <Link
+                  href="/pricing"
+                  className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-2 text-xs font-black text-black transition hover:bg-zinc-200"
+                >
+                  查看套餐
+                </Link>
+
+                <Link
+                  href="/waitlist"
+                  className="flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/10"
+                >
+                  加入等待名单
+                </Link>
+
+                <Link
+                  href="/dashboard"
+                  className="flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/10"
+                >
+                  会员中心
+                </Link>
+
+                <Link
+                  href="/login"
+                  className="flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/10"
+                >
+                  登录账号
+                </Link>
+              </div>
             </div>
           </div>
         </aside>
@@ -781,6 +804,27 @@ export default function ChatPage() {
                 className="inline-flex rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-zinc-300 transition hover:bg-white/10 hover:text-white"
               >
                 套餐价格
+              </Link>
+
+              <Link
+                href="/waitlist"
+                className="inline-flex rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-zinc-300 transition hover:bg-white/10 hover:text-white"
+              >
+                等待名单
+              </Link>
+
+              <Link
+                href="/dashboard"
+                className="inline-flex rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-zinc-300 transition hover:bg-white/10 hover:text-white"
+              >
+                会员中心
+              </Link>
+
+              <Link
+                href="/login"
+                className="inline-flex rounded-full border border-white/10 bg-white px-4 py-2 text-sm font-black text-black transition hover:bg-zinc-200"
+              >
+                登录
               </Link>
             </div>
 
@@ -865,12 +909,28 @@ export default function ChatPage() {
                 Pro 套餐获得更多次数。
               </p>
 
-              <Link
-                href="/pricing"
-                className="mt-4 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200"
-              >
-                查看套餐价格
-              </Link>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href="/pricing"
+                  className="inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200"
+                >
+                  查看套餐价格
+                </Link>
+
+                <Link
+                  href="/waitlist"
+                  className="inline-flex rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-5 py-3 text-sm font-black text-yellow-100 transition hover:bg-yellow-400/20"
+                >
+                  加入等待名单
+                </Link>
+
+                <Link
+                  href="/login"
+                  className="inline-flex rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-5 py-3 text-sm font-black text-yellow-100 transition hover:bg-yellow-400/20"
+                >
+                  登录账号
+                </Link>
+              </div>
             </div>
           )}
 
