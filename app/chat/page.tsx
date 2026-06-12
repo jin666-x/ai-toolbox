@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const tools = [
   {
@@ -8,42 +10,242 @@ const tools = [
     name: "AI 聊天助手",
     tag: "通用问答",
     desc: "适合日常问答、方案整理、内容创作。",
-    placeholder: "请输入你的问题，例如：帮我分析一下这个项目怎么做...",
+    placeholder: "直接输入你的问题，例如：这个项目怎么做、怎么赚钱、怎么优化...",
     example: "帮我分析一下 AI 工具箱网站应该怎么运营",
   },
   {
     id: "copy",
     name: "爆款文案",
     tag: "短视频/种草",
-    desc: "生成抖音、小红书、朋友圈爆款文案。",
-    placeholder: "请输入产品、服务或主题，例如：AI工具箱、咖啡、CDN服务...",
-    example: "帮我写一条关于 AI 工具箱的抖音爆款文案",
+    desc: "输入产品或主题，自动生成抖音、小红书、朋友圈文案。",
+    placeholder: "输入产品或主题，例如：AI工具箱、咖啡、免费CDN、奶茶店...",
+    example: "AI工具箱",
   },
   {
     id: "title",
     name: "标题生成",
     tag: "吸睛标题",
-    desc: "生成短视频、小红书、广告标题。",
-    placeholder: "请输入主题，例如：AI工具箱如何帮普通人赚钱...",
-    example: "帮我生成10个关于 AI 工具箱的爆款标题",
+    desc: "输入主题，自动生成短视频、小红书、广告标题。",
+    placeholder: "输入主题，例如：AI工具箱、短视频副业、免费CDN...",
+    example: "AI工具箱",
   },
   {
     id: "ad",
     name: "广告优化",
     tag: "转化提升",
-    desc: "优化广告词，让表达更有吸引力。",
-    placeholder: "请输入你现在的广告词，我帮你优化...",
-    example: "帮我优化这句广告词：AI工具箱，一键生成文案",
+    desc: "粘贴广告词，AI 自动帮你优化成更有吸引力的版本。",
+    placeholder: "粘贴你的广告词，例如：AI工具箱，一键生成文案",
+    example: "AI工具箱，一键生成文案",
   },
   {
     id: "code",
     name: "代码助手",
     tag: "开发辅助",
     desc: "帮你看代码、改页面、解释报错。",
-    placeholder: "把你的代码或报错粘贴进来...",
+    placeholder: "把你的代码、报错、需求粘贴进来...",
     example: "帮我解释一下 Next.js 里面 app/page.tsx 是干嘛的",
   },
 ];
+
+function buildFinalPrompt(toolId: string, userInput: string) {
+  if (toolId === "copy") {
+    return `
+当前工具：爆款文案生成器
+
+用户输入的主题是：
+${userInput}
+
+请不要反问用户，直接根据主题自动生成内容。
+
+你必须严格按照下面 Markdown 格式输出：
+
+## 爆款文案方案
+
+### 文案版本 1：强吸引开头
+- **开头钩子：**
+- **正文内容：**
+- **引导动作：**
+
+### 文案版本 2：痛点刺激版
+- **开头钩子：**
+- **正文内容：**
+- **引导动作：**
+
+### 文案版本 3：种草推荐版
+- **开头钩子：**
+- **正文内容：**
+- **引导动作：**
+
+### 推荐发布标题
+1. **标题：**
+2. **标题：**
+3. **标题：**
+
+### 推荐标签
+- #AI工具
+- #效率提升
+- #实用工具
+
+要求：
+- 文案要接地气，不要太像 AI
+- 适合抖音、小红书、朋友圈
+- 不要输出一大段纯文字
+- 必须有标题、加粗、列表
+`;
+  }
+
+  if (toolId === "title") {
+    return `
+当前工具：爆款标题生成器
+
+用户输入的主题是：
+${userInput}
+
+请不要反问用户，直接生成标题。
+
+你必须严格按照下面 Markdown 格式输出：
+
+## 爆款标题推荐
+
+### 强冲突标题
+1. **标题：**
+2. **标题：**
+3. **标题：**
+
+### 好奇心标题
+1. **标题：**
+2. **标题：**
+3. **标题：**
+
+### 转化型标题
+1. **标题：**
+2. **标题：**
+3. **标题：**
+
+### 最推荐标题
+- **推荐标题：**
+- **推荐理由：**
+
+要求：
+- 标题要短
+- 要有点击欲望
+- 适合抖音、小红书、公众号、广告使用
+- 不要输出一大段纯文字
+`;
+  }
+
+  if (toolId === "ad") {
+    return `
+当前工具：广告优化器
+
+用户输入的广告词是：
+${userInput}
+
+请不要反问用户，直接分析并优化。
+
+你必须严格按照下面 Markdown 格式输出：
+
+## 广告词优化结果
+
+### 原广告词问题
+- **问题1：**
+- **问题2：**
+- **问题3：**
+
+### 优化版本
+- **版本1：**
+- **版本2：**
+- **版本3：**
+- **版本4：**
+- **版本5：**
+
+### 最推荐版本
+- **推荐广告词：**
+- **推荐理由：**
+
+### 适合投放场景
+- **抖音：**
+- **小红书：**
+- **朋友圈：**
+
+要求：
+- 语言要有销售感
+- 不要太夸张
+- 适合真实投放
+- 不要输出一大段纯文字
+`;
+  }
+
+  if (toolId === "code") {
+    return `
+当前工具：代码助手
+
+用户的问题或代码是：
+${userInput}
+
+请用小白能看懂的话解释，并给出具体解决方法。
+
+你必须严格按照下面 Markdown 格式输出：
+
+## 问题原因
+
+- **原因1：**
+- **原因2：**
+
+## 解决方法
+
+### 第一步
+- 具体操作：
+
+### 第二步
+- 具体操作：
+
+### 第三步
+- 具体操作：
+
+## 可复制代码
+
+\`\`\`tsx
+// 如果需要代码，就写在这里
+\`\`\`
+
+## 注意事项
+
+- **注意1：**
+- **注意2：**
+`;
+  }
+
+  return `
+当前工具：AI 聊天助手
+
+用户问题：
+${userInput}
+
+请使用标准 Markdown 输出。
+
+输出格式要求：
+
+## 回答结果
+
+### 核心结论
+- **结论：**
+
+### 详细说明
+- **第1点：**
+- **第2点：**
+- **第3点：**
+
+### 建议
+- **建议1：**
+- **建议2：**
+
+要求：
+- 不要输出一大段纯文字
+- 必须有标题、加粗、列表
+- 用普通用户能看懂的话回答
+`;
+}
 
 export default function ChatPage() {
   const [activeTool, setActiveTool] = useState(tools[0]);
@@ -60,6 +262,8 @@ export default function ChatPage() {
     setError("");
 
     try {
+      const finalMessage = buildFinalPrompt(activeTool.id, message.trim());
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -67,7 +271,7 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           tool: activeTool.id,
-          message: message.trim(),
+          message: finalMessage,
         }),
       });
 
@@ -85,9 +289,9 @@ export default function ChatPage() {
     }
   }
 
-  function changeTool(tool: typeof tools[number]) {
+  function changeTool(tool: (typeof tools)[number]) {
     setActiveTool(tool);
-    setMessage(tool.example);
+    setMessage("");
     setReply("");
     setError("");
   }
@@ -132,7 +336,9 @@ export default function ChatPage() {
                 <div>{tool.name}</div>
                 <div
                   className={`mt-1 text-xs ${
-                    activeTool.id === tool.id ? "text-zinc-600" : "text-zinc-500"
+                    activeTool.id === tool.id
+                      ? "text-zinc-600"
+                      : "text-zinc-500"
                   }`}
                 >
                   {tool.tag}
@@ -162,9 +368,7 @@ export default function ChatPage() {
               {activeTool.name}
             </h1>
 
-            <p className="mt-4 max-w-2xl text-zinc-400">
-              {activeTool.desc}
-            </p>
+            <p className="mt-4 max-w-2xl text-zinc-400">{activeTool.desc}</p>
           </header>
 
           <div className="mb-4 grid gap-3 md:grid-cols-5 lg:hidden">
@@ -235,8 +439,67 @@ export default function ChatPage() {
                   <div className="h-4 w-2/3 animate-pulse rounded bg-white/10" />
                 </div>
               ) : (
-                <div className="whitespace-pre-wrap leading-8 text-zinc-300">
-                  {reply}
+                <div className="max-w-none leading-8 text-zinc-300">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ children }) => (
+                        <h1 className="mb-4 mt-6 text-3xl font-black text-white">
+                          {children}
+                        </h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 className="mb-3 mt-6 text-2xl font-black text-white">
+                          {children}
+                        </h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 className="mb-2 mt-5 text-xl font-bold text-white">
+                          {children}
+                        </h3>
+                      ),
+                      p: ({ children }) => (
+                        <p className="mb-4 leading-8 text-zinc-300">
+                          {children}
+                        </p>
+                      ),
+                      strong: ({ children }) => (
+                        <strong className="font-black text-white">
+                          {children}
+                        </strong>
+                      ),
+                      ul: ({ children }) => (
+                        <ul className="mb-4 ml-6 list-disc space-y-2 text-zinc-300">
+                          {children}
+                        </ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol className="mb-4 ml-6 list-decimal space-y-2 text-zinc-300">
+                          {children}
+                        </ol>
+                      ),
+                      li: ({ children }) => (
+                        <li className="leading-8 text-zinc-300">{children}</li>
+                      ),
+                      blockquote: ({ children }) => (
+                        <blockquote className="mb-4 border-l-4 border-white/20 pl-4 text-zinc-400">
+                          {children}
+                        </blockquote>
+                      ),
+                      code: ({ children }) => (
+                        <code className="rounded-lg bg-white/10 px-2 py-1 text-sm text-zinc-100">
+                          {children}
+                        </code>
+                      ),
+                      pre: ({ children }) => (
+                        <pre className="mb-4 overflow-x-auto rounded-2xl border border-white/10 bg-black/60 p-4 text-sm text-zinc-100">
+                          {children}
+                        </pre>
+                      ),
+                    }}
+                  >
+                    {reply}
+                  </ReactMarkdown>
                 </div>
               )}
             </div>
