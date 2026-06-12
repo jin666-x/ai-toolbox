@@ -92,6 +92,10 @@ export default function HomePage() {
             套餐价格
           </Link>
 
+          <Link href="/waitlist" className="hover:text-white">
+            等待名单
+          </Link>
+
           <Link href="/dashboard" className="hover:text-white">
             会员中心
           </Link>
@@ -146,10 +150,10 @@ export default function HomePage() {
           </Link>
 
           <Link
-            href="/login"
+            href="/waitlist"
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-bold text-white transition hover:bg-white/10"
           >
-            登录会员账号
+            加入 Pro 等待名单
           </Link>
 
           <a
@@ -280,10 +284,10 @@ export default function HomePage() {
             </Link>
 
             <Link
-              href="/login"
+              href="/waitlist"
               className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-10 py-4 text-lg font-black text-white transition hover:bg-white/10"
             >
-              登录账号
+              加入等待名单
             </Link>
           </div>
         </div>
@@ -305,6 +309,10 @@ export default function HomePage() {
 
           <Link href="/pricing" className="transition hover:text-white">
             套餐价格
+          </Link>
+
+          <Link href="/waitlist" className="transition hover:text-white">
+            等待名单
           </Link>
 
           <Link href="/dashboard" className="transition hover:text-white">
