@@ -31,6 +31,10 @@ export default function NotFound() {
             会员中心
           </Link>
 
+          <Link href="/contact" className="hover:text-white">
+            联系我们
+          </Link>
+
           <Link href="/login" className="hover:text-white">
             登录
           </Link>
@@ -59,7 +63,7 @@ export default function NotFound() {
 
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
           你访问的页面可能已经被删除、地址输入错误，或者暂时不可用。
-          可以返回首页，或者直接进入 AI 工具箱继续使用。
+          可以返回首页，进入 AI 工具箱，或者联系我们反馈问题。
         </p>
 
         <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
@@ -78,14 +82,24 @@ export default function NotFound() {
           </Link>
 
           <Link
-            href="/pricing"
+            href="/contact"
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
           >
-            查看套餐
+            联系我们
           </Link>
         </div>
 
         <div className="mt-12 grid w-full gap-4 text-left md:grid-cols-3">
+          <Link
+            href="/pricing"
+            className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/10"
+          >
+            <div className="text-2xl font-black">套餐价格</div>
+            <p className="mt-3 leading-7 text-zinc-400">
+              查看免费版和 Pro 版本权益。
+            </p>
+          </Link>
+
           <Link
             href="/waitlist"
             className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/10"
@@ -97,22 +111,12 @@ export default function NotFound() {
           </Link>
 
           <Link
-            href="/dashboard"
+            href="/contact"
             className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/10"
           >
-            <div className="text-2xl font-black">会员中心</div>
+            <div className="text-2xl font-black">联系我们</div>
             <p className="mt-3 leading-7 text-zinc-400">
-              查看套餐、次数和会员权益展示页面。
-            </p>
-          </Link>
-
-          <Link
-            href="/login"
-            className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/10"
-          >
-            <div className="text-2xl font-black">登录账号</div>
-            <p className="mt-3 leading-7 text-zinc-400">
-              后续接入真实登录后，可管理账号和订单。
+              页面异常、功能建议、产品咨询，都可以从这里反馈。
             </p>
           </Link>
         </div>
@@ -122,6 +126,10 @@ export default function NotFound() {
         <div className="mb-4 flex flex-wrap justify-center gap-5">
           <Link href="/about" className="transition hover:text-white">
             关于我们
+          </Link>
+
+          <Link href="/contact" className="transition hover:text-white">
+            联系我们
           </Link>
 
           <Link href="/privacy" className="transition hover:text-white">
