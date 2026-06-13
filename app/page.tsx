@@ -111,11 +111,11 @@ const planCards = [
     unit: "/ 月",
     limit: "100 次/天",
     desc: "适合高频创作、短视频运营、广告文案和办公提效。",
-    button: "申请月卡 Pro",
-    href: "/waitlist",
+    button: "去付款确认",
+    href: "/checkout",
     hot: true,
     status: "推荐",
-    features: ["每日 100 次", "人工开通", "邮件通知"],
+    features: ["每日 100 次", "人工审核", "邮件通知"],
   },
   {
     name: "Pro 年卡",
@@ -123,8 +123,8 @@ const planCards = [
     unit: "/ 年",
     limit: "100 次/天",
     desc: "适合长期稳定使用 AI 工具，价格比月卡更划算。",
-    button: "申请年卡 Pro",
-    href: "/waitlist",
+    button: "去付款确认",
+    href: "/checkout",
     hot: false,
     status: "更划算",
     features: ["全年使用", "每日 100 次", "适合长期用户"],
@@ -172,10 +172,10 @@ export default function HomePage() {
           </Link>
 
           <Link
-            href="/waitlist"
+            href="/checkout"
             className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 text-lg font-bold text-purple-100 transition hover:bg-purple-500/30"
           >
-            申请 Pro 会员
+            Pro 付款确认
           </Link>
         </div>
 
@@ -250,7 +250,7 @@ export default function HomePage() {
 
           <p className="mt-5 text-zinc-400">
             未登录可体验 5 次，登录后 Free 每日 10 次，Pro 每日 100 次。
-            月卡和年卡都可以提交申请，由管理员人工开通。
+            月卡和年卡都可以提交付款确认，由管理员人工审核开通。
           </p>
         </div>
 
@@ -342,10 +342,10 @@ export default function HomePage() {
           </Link>
 
           <Link
-            href="/waitlist"
+            href="/checkout"
             className="inline-flex rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 font-black text-purple-100 transition hover:bg-purple-500/30"
           >
-            申请 Pro 会员
+            去付款确认
           </Link>
         </div>
       </section>
@@ -419,10 +419,10 @@ export default function HomePage() {
             </Link>
 
             <Link
-              href="/waitlist"
+              href="/checkout"
               className="inline-flex rounded-2xl border border-purple-300/30 bg-purple-500/20 px-10 py-4 text-lg font-black text-purple-100 transition hover:bg-purple-500/30"
             >
-              申请 Pro
+              去付款确认
             </Link>
           </div>
         </div>

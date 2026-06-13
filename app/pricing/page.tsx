@@ -37,13 +37,13 @@ const plans = [
       "适合销售和广告投放",
       "优先体验新功能",
       "会员中心显示 Pro 状态",
-      "人工开通会员权限",
+      "管理员审核后开通",
     ],
-    button: "申请开通 Pro",
-    href: "/waitlist",
+    button: "提交付款确认",
+    href: "/checkout",
     hot: true,
-    status: "人工开通",
-    note: "当前支付功能暂未开放，可提交申请后由管理员开通。",
+    status: "人工审核",
+    note: "提交付款确认后，由管理员审核并开通 Pro。",
   },
   {
     name: "Pro 年卡",
@@ -57,21 +57,21 @@ const plans = [
       "适合长期内容生产",
       "适合副业、自媒体、创业者",
       "后续可升级更多权益",
-      "支持人工开通",
+      "支持人工审核开通",
       "适合重度使用用户",
     ],
-    button: "申请年卡 Pro",
-    href: "/waitlist",
+    button: "提交年卡确认",
+    href: "/checkout",
     hot: false,
-    status: "人工开通",
-    note: "提交申请后由管理员审核开通，开通成功后会邮件通知。",
+    status: "人工审核",
+    note: "提交付款确认后由管理员审核开通，开通成功后会邮件通知。",
   },
 ];
 
 const faqs = [
   {
     q: "现在可以直接支付购买吗？",
-    a: "当前支付功能还没有接入。Pro 会员可以先通过申请页提交申请，然后由管理员手动开通。",
+    a: "当前先走人工审核流程。你可以进入付款确认页，选择套餐并提交付款凭证，管理员确认后会为账号开通 Pro。",
   },
   {
     q: "免费版每天可以用几次？",
@@ -109,7 +109,7 @@ export default function PricingPage() {
 
         <p className="mx-auto mt-8 max-w-3xl text-lg leading-8 text-zinc-400">
           免费版适合体验，Pro 版适合高频创作、文案生成、短视频脚本、
-          广告优化和办公效率提升。当前 Pro 会员支持人工开通，支付功能后续接入。
+          广告优化和办公效率提升。当前 Pro 会员支持付款确认后人工审核开通。
         </p>
 
         <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
@@ -121,10 +121,10 @@ export default function PricingPage() {
           </Link>
 
           <Link
-            href="/waitlist"
+            href="/checkout"
             className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 text-lg font-black text-purple-100 transition hover:bg-purple-500/30"
           >
-            申请 Pro 会员
+            提交付款确认
           </Link>
 
           <Link
@@ -217,20 +217,20 @@ export default function PricingPage() {
               <h2 className="text-4xl font-black md:text-5xl">
                 Pro 会员已支持，
                 <br />
-                可人工开通权限
+                可人工审核开通
               </h2>
 
               <p className="mt-6 leading-8 text-zinc-400">
                 当前系统已经支持登录账号、会员中心、每日使用次数、Free / Pro
-                套餐识别、会员开通、到期降级和开通记录。支付功能后续接入前，可以先通过申请页提交申请。
+                套餐识别、会员开通、到期降级和开通记录。你可以通过付款确认页提交信息，管理员审核后开通。
               </p>
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <Link
-                  href="/waitlist"
+                  href="/checkout"
                   className="inline-flex rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
                 >
-                  申请 Pro
+                  去付款确认
                 </Link>
 
                 <Link
