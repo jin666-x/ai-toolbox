@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
-import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
+import { FormEvent, useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type WaitlistForm = {
   name: string;
@@ -40,6 +39,8 @@ const proBenefits = [
 
 export default function WaitlistPage() {
   const [form, setForm] = useState<WaitlistForm>(initialForm);
+  const [userId, setUserId] = useState("");
+  const [checkingUser, setCheckingUser] = useState(true);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{
     type: "success" | "error";
@@ -52,6 +53,32 @@ export default function WaitlistPage() {
       [key]: value,
     }));
   }
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getUser();
+
+        if (data.user) {
+          setUserId(data.user.id);
+
+          if (data.user.email) {
+            setForm((prev) => ({
+              ...prev,
+              email: prev.email || data.user?.email || "",
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("读取登录用户失败：", error);
+      } finally {
+        setCheckingUser(false);
+      }
+    }
+
+    loadUser();
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -79,6 +106,15 @@ export default function WaitlistPage() {
       return;
     }
 
+    if (!form.useCase.trim()) {
+      setStatus({
+        type: "error",
+        message: "请选择主要使用场景。",
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/waitlist", {
         method: "POST",
@@ -87,7 +123,9 @@ export default function WaitlistPage() {
         },
         body: JSON.stringify({
           ...form,
+          userId: userId || null,
           message: `【Pro 申请信息】
+用户ID：${userId || "未登录 / 未获取到用户 ID"}
 称呼：${form.name}
 邮箱：${form.email}
 微信/公司/团队：${form.company || "未填写"}
@@ -116,7 +154,10 @@ ${form.message || "未填写"}`,
           "提交成功，我们已经收到你的 Pro 申请，后续会通过邮箱联系你。",
       });
 
-      setForm(initialForm);
+      setForm((prev) => ({
+        ...initialForm,
+        email: prev.email,
+      }));
     } catch {
       setStatus({
         type: "error",
@@ -128,14 +169,36 @@ ${form.message || "未填写"}`,
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.35),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.28),transparent_35%)]" />
+    <main className="min-h-screen bg-[#050505] text-white">
+      <section className="relative overflow-hidden border-b border-white/10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.35),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.28),transparent_35%)]" />
 
-      <SiteHeader />
+        <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 py-8 md:px-8 lg:px-10">
+          <nav className="flex flex-wrap items-center justify-between gap-4">
+            <Link href="/" className="text-xl font-black tracking-tight">
+              AI Bot Pro
+            </Link>
 
-      <section className="relative border-b border-white/10">
-        <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 pb-20 pt-16 md:px-8 md:pt-24 lg:px-10">
-          <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
+              <Link href="/" className="hover:text-white">
+                首页
+              </Link>
+              <Link href="/chat" className="hover:text-white">
+                AI 工具
+              </Link>
+              <Link href="/pricing" className="hover:text-white">
+                套餐价格
+              </Link>
+              <Link href="/dashboard" className="hover:text-white">
+                会员中心
+              </Link>
+              <Link href="/contact" className="hover:text-white">
+                联系我们
+              </Link>
+            </div>
+          </nav>
+
+          <div className="grid gap-10 py-12 lg:grid-cols-[1fr_0.9fr] lg:items-center">
             <div>
               <div className="mb-5 inline-flex rounded-full border border-purple-300/30 bg-purple-500/10 px-4 py-2 text-sm font-bold text-purple-100">
                 Pro 会员申请
@@ -173,9 +236,9 @@ ${form.message || "未填写"}`,
                 </div>
 
                 <div className="mt-4 space-y-3 text-sm leading-7 text-purple-100/75">
-                  <p>1. 提交 Pro 会员申请。</p>
-                  <p>2. 我们会通过邮箱或联系方式与你确认。</p>
-                  <p>3. 确认后为你的账号开通 Pro 权限。</p>
+                  <p>1. 先登录账号，再提交 Pro 会员申请。</p>
+                  <p>2. 系统会自动记录你的用户 ID。</p>
+                  <p>3. 管理员确认后，可以直接为该账号开通 Pro。</p>
                   <p>4. 开通后进入会员中心和 AI 工具页，即可看到 Pro 额度。</p>
                 </div>
               </div>
@@ -183,6 +246,29 @@ ${form.message || "未填写"}`,
 
             <div className="rounded-[2rem] border border-white/10 bg-black/40 p-5 shadow-2xl shadow-purple-950/30 backdrop-blur md:p-7">
               <form onSubmit={handleSubmit} className="space-y-5">
+                <div
+                  className={
+                    userId
+                      ? "rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm leading-7 text-emerald-200"
+                      : "rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm leading-7 text-yellow-100"
+                  }
+                >
+                  {checkingUser
+                    ? "正在读取登录账号..."
+                    : userId
+                    ? `已识别登录账号，用户 ID：${userId}`
+                    : "当前未登录。建议先登录账号再提交申请，这样后台可以直接识别你的用户 ID。"}
+                </div>
+
+                {!userId && !checkingUser ? (
+                  <Link
+                    href="/login"
+                    className="block rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-center text-sm font-black text-white transition hover:bg-white/10"
+                  >
+                    去登录账号
+                  </Link>
+                ) : null}
+
                 <div>
                   <label className="mb-2 block text-sm font-bold text-white/75">
                     你的称呼
@@ -320,8 +406,6 @@ ${form.message || "未填写"}`,
           </div>
         </div>
       </section>
-
-      <SiteFooter />
     </main>
   );
 }

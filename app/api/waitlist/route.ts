@@ -8,6 +8,7 @@ type WaitlistRequestBody = {
   plan?: string;
   useCase?: string;
   message?: string;
+  userId?: string | null;
 };
 
 function isValidEmail(email: string) {
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
     const plan = String(body.plan || "").trim();
     const useCase = String(body.useCase || "").trim();
     const message = String(body.message || "").trim();
+    const userId = body.userId ? String(body.userId).trim() : null;
 
     if (!name) {
       return Response.json({ error: "请填写你的称呼。" }, { status: 400 });
@@ -72,6 +74,7 @@ export async function POST(req: Request) {
     const supabase = createAdminClient();
 
     const { error: dbError } = await supabase.from("pro_applications").insert({
+      user_id: userId || null,
       name,
       email,
       company: company || null,
@@ -111,6 +114,7 @@ export async function POST(req: Request) {
     const safeCompany = escapeHtml(company || "未填写");
     const safePlan = escapeHtml(plan);
     const safeUseCase = escapeHtml(useCase);
+    const safeUserId = escapeHtml(userId || "未登录 / 未获取到用户 ID");
     const safeMessage = escapeHtml(message || "未填写").replaceAll(
       "\n",
       "<br />"
@@ -127,6 +131,7 @@ export async function POST(req: Request) {
 
           <div style="padding: 16px; background: #f7f7f7; border-radius: 12px; margin-bottom: 16px;">
             <p><strong>提交时间：</strong>${safeCreatedAt}</p>
+            <p><strong>用户 ID：</strong>${safeUserId}</p>
             <p><strong>称呼：</strong>${safeName}</p>
             <p><strong>邮箱：</strong>${safeEmail}</p>
             <p><strong>微信 / 公司 / 团队：</strong>${safeCompany}</p>
@@ -148,6 +153,7 @@ export async function POST(req: Request) {
 AI Bot Pro 收到新的 Pro 会员申请
 
 提交时间：${createdAt}
+用户 ID：${userId || "未登录 / 未获取到用户 ID"}
 称呼：${name}
 邮箱：${email}
 微信 / 公司 / 团队：${company || "未填写"}
