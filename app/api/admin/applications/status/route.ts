@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       })
       .eq("id", applicationId)
       .select(
-        "id, name, email, company, plan, use_case, message, status, created_at, updated_at"
+        "id, user_id, name, email, company, plan, use_case, message, status, created_at, updated_at"
       )
       .single();
 

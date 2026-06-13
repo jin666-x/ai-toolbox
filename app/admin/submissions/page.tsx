@@ -7,6 +7,7 @@ type ApplicationStatus = "pending" | "contacted" | "approved" | "rejected";
 
 type ProApplication = {
   id: string;
+  user_id: string | null;
   name: string;
   email: string;
   company: string | null;
@@ -81,10 +82,12 @@ export default function AdminSubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   async function loadData() {
     setLoading(true);
     setError("");
+    setNotice("");
 
     try {
       const res = await fetch("/api/admin/submissions", {
@@ -121,6 +124,7 @@ export default function AdminSubmissionsPage() {
 
     setUpdatingId(applicationId);
     setError("");
+    setNotice("");
 
     try {
       const res = await fetch("/api/admin/applications/status", {
@@ -153,11 +157,23 @@ export default function AdminSubmissionsPage() {
             item.id === data.application?.id ? data.application : item
           )
         );
+
+        setNotice("申请状态更新成功。");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "更新失败，请稍后再试。");
     } finally {
       setUpdatingId("");
+    }
+  }
+
+  async function copyUserId(userId: string) {
+    try {
+      await navigator.clipboard.writeText(userId);
+      setNotice("用户 ID 已复制。");
+      setError("");
+    } catch {
+      setError("复制失败，请手动选中用户 ID 复制。");
     }
   }
 
@@ -257,6 +273,12 @@ export default function AdminSubmissionsPage() {
           </div>
         ) : null}
 
+        {notice ? (
+          <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-emerald-200">
+            {notice}
+          </div>
+        ) : null}
+
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
             <div className="mb-6 flex items-center justify-between gap-4">
@@ -278,7 +300,8 @@ export default function AdminSubmissionsPage() {
             ) : (
               <div className="space-y-4">
                 {applications.map((item) => {
-                  const currentStatus = statusMap[item.status] || statusMap.pending;
+                  const currentStatus =
+                    statusMap[item.status] || statusMap.pending;
                   const isUpdating = updatingId === item.id;
 
                   return (
@@ -321,6 +344,19 @@ export default function AdminSubmissionsPage() {
                           <span className="text-white/40">时间：</span>
                           {formatTime(item.created_at)}
                         </div>
+
+                        <div className="md:col-span-2">
+                          <span className="text-white/40">用户 ID：</span>
+                          {item.user_id ? (
+                            <span className="break-all text-emerald-200">
+                              {item.user_id}
+                            </span>
+                          ) : (
+                            <span className="text-yellow-200">
+                              未记录，可能是旧申请或用户未登录
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-7 text-white/65">
@@ -328,6 +364,16 @@ export default function AdminSubmissionsPage() {
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
+                        {item.user_id ? (
+                          <button
+                            type="button"
+                            onClick={() => copyUserId(item.user_id || "")}
+                            className="rounded-full border border-white/10 bg-white px-4 py-2 text-xs font-black text-black transition hover:bg-zinc-200"
+                          >
+                            复制用户 ID
+                          </button>
+                        ) : null}
+
                         <button
                           type="button"
                           disabled={isUpdating || item.status === "contacted"}

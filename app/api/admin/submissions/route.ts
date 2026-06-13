@@ -7,7 +7,7 @@ export async function GET() {
     const { data: applications, error: applicationsError } = await supabase
       .from("pro_applications")
       .select(
-        "id, name, email, company, plan, use_case, message, status, created_at, updated_at"
+        "id, user_id, name, email, company, plan, use_case, message, status, created_at, updated_at"
       )
       .order("created_at", { ascending: false })
       .limit(50);
