@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 type WaitlistForm = {
   name: string;
@@ -126,36 +128,14 @@ ${form.message || "未填写"}`,
   }
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white">
-      <section className="relative overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.35),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.28),transparent_35%)]" />
+    <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.35),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.28),transparent_35%)]" />
 
-        <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 py-8 md:px-8 lg:px-10">
-          <nav className="flex flex-wrap items-center justify-between gap-4">
-            <Link href="/" className="text-xl font-black tracking-tight">
-              AI Bot Pro
-            </Link>
+      <SiteHeader />
 
-            <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
-              <Link href="/" className="hover:text-white">
-                首页
-              </Link>
-              <Link href="/chat" className="hover:text-white">
-                AI 工具
-              </Link>
-              <Link href="/pricing" className="hover:text-white">
-                套餐价格
-              </Link>
-              <Link href="/dashboard" className="hover:text-white">
-                会员中心
-              </Link>
-              <Link href="/contact" className="hover:text-white">
-                联系我们
-              </Link>
-            </div>
-          </nav>
-
-          <div className="grid gap-10 py-12 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+      <section className="relative border-b border-white/10">
+        <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 pb-20 pt-16 md:px-8 md:pt-24 lg:px-10">
+          <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
             <div>
               <div className="mb-5 inline-flex rounded-full border border-purple-300/30 bg-purple-500/10 px-4 py-2 text-sm font-bold text-purple-100">
                 Pro 会员申请
@@ -340,6 +320,8 @@ ${form.message || "未填写"}`,
           </div>
         </div>
       </section>
+
+      <SiteFooter />
     </main>
   );
 }
