@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type OrderStatus = "active" | "expired" | "refunded" | "cancelled";
+
 type ProOrder = {
   id: string;
   application_id: string | null;
@@ -14,7 +16,7 @@ type ProOrder = {
   currency: string;
   daily_limit: number;
   expired_at: string | null;
-  status: string;
+  status: OrderStatus | string;
   source: string;
   email_sent: boolean;
   created_at: string;
@@ -33,6 +35,13 @@ type ExpireProResponse = {
   expiredCount?: number;
   orderStatusUpdated?: boolean;
   error?: string;
+};
+
+type UpdateOrderStatusResponse = {
+  success: boolean;
+  message?: string;
+  error?: string;
+  order?: ProOrder;
 };
 
 function formatTime(value: string | null) {
@@ -62,10 +71,39 @@ function formatAmount(amountCents: number, currency: string) {
   return `${amount.toFixed(2)} ${currency}`;
 }
 
+function getStatusText(status: string) {
+  if (status === "active") return "有效中";
+  if (status === "expired") return "已过期";
+  if (status === "refunded") return "已退款";
+  if (status === "cancelled") return "已停用";
+  return status;
+}
+
+function getStatusClass(status: string) {
+  if (status === "active") {
+    return "rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-200";
+  }
+
+  if (status === "expired") {
+    return "rounded-full border border-yellow-400/20 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-200";
+  }
+
+  if (status === "refunded") {
+    return "rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-200";
+  }
+
+  if (status === "cancelled") {
+    return "rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-xs font-bold text-red-200";
+  }
+
+  return "rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/60";
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<ProOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [expireLoading, setExpireLoading] = useState(false);
+  const [statusLoadingId, setStatusLoadingId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -128,15 +166,103 @@ export default function AdminOrdersPage() {
         throw new Error(data.error || "检查失败");
       }
 
+      const successMessage = data.message || "检查完成。";
+
+      setNotice(successMessage);
+      alert(successMessage);
+
       await loadOrders({
         clearMessage: false,
       });
 
-      setNotice(data.message || "检查完成。");
+      setNotice(successMessage);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "检查失败，请稍后再试。");
+      const errorMessage =
+        err instanceof Error ? err.message : "检查失败，请稍后再试。";
+
+      setError(errorMessage);
+      alert(errorMessage);
     } finally {
       setExpireLoading(false);
+    }
+  }
+
+  async function updateOrderStatus(order: ProOrder, status: OrderStatus) {
+    if (statusLoadingId) return;
+
+    let confirmText = "";
+
+    if (status === "active") {
+      confirmText =
+        "确定要恢复这个用户的 Pro 吗？系统会把该用户套餐同步改成 Pro。";
+    }
+
+    if (status === "cancelled") {
+      confirmText =
+        "确定要停用这个用户的 Pro 吗？系统会把该用户套餐同步降级为 Free。";
+    }
+
+    if (status === "refunded") {
+      confirmText =
+        "确定要标记为已退款吗？系统会把该用户套餐同步降级为 Free。";
+    }
+
+    if (status === "expired") {
+      confirmText =
+        "确定要标记为已过期吗？系统会把该用户套餐同步降级为 Free。";
+    }
+
+    const confirmed = window.confirm(confirmText);
+
+    if (!confirmed) return;
+
+    setStatusLoadingId(order.id);
+    setError("");
+    setNotice("");
+
+    try {
+      const res = await fetch("/api/admin/orders/status", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          status,
+        }),
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("后台接口返回异常，请重新通过 admin_key 进入后台。");
+      }
+
+      const data = (await res.json()) as UpdateOrderStatusResponse;
+
+      if (!res.ok) {
+        throw new Error(data.error || "更新失败");
+      }
+
+      const successMessage = data.message || "订单状态已更新。";
+
+      setNotice(successMessage);
+      alert(successMessage);
+
+      await loadOrders({
+        clearMessage: false,
+      });
+
+      setNotice(successMessage);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "更新失败，请稍后再试。";
+
+      setError(errorMessage);
+      alert(errorMessage);
+    } finally {
+      setStatusLoadingId("");
     }
   }
 
@@ -219,7 +345,7 @@ export default function AdminOrdersPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              这里展示所有通过后台一键开通的 Pro 记录，包括用户邮箱、套餐、金额、到期时间和邮件通知状态。
+              这里可以查看 Pro 开通记录，也可以手动停用、恢复、标记退款或检查过期 Pro。
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -300,20 +426,8 @@ export default function AdminOrdersPage() {
                       </div>
                     </div>
 
-                    <div
-                      className={
-                        order.status === "active"
-                          ? "rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-200"
-                          : order.status === "expired"
-                          ? "rounded-full border border-yellow-400/20 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-200"
-                          : "rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/60"
-                      }
-                    >
-                      {order.status === "active"
-                        ? "有效中"
-                        : order.status === "expired"
-                        ? "已过期"
-                        : order.status}
+                    <div className={getStatusClass(order.status)}>
+                      {getStatusText(order.status)}
                     </div>
                   </div>
 
@@ -393,6 +507,46 @@ export default function AdminOrdersPage() {
                     >
                       复制邮箱
                     </button>
+
+                    {order.status === "active" ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={statusLoadingId === order.id}
+                          onClick={() => updateOrderStatus(order, "cancelled")}
+                          className="rounded-full border border-red-400/20 bg-red-500/10 px-4 py-2 text-xs font-bold text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {statusLoadingId === order.id ? "处理中..." : "停用 Pro"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={statusLoadingId === order.id}
+                          onClick={() => updateOrderStatus(order, "refunded")}
+                          className="rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold text-blue-200 transition hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          标记退款
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={statusLoadingId === order.id}
+                          onClick={() => updateOrderStatus(order, "expired")}
+                          className="rounded-full border border-yellow-400/20 bg-yellow-500/10 px-4 py-2 text-xs font-bold text-yellow-200 transition hover:bg-yellow-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          标记过期
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={statusLoadingId === order.id}
+                        onClick={() => updateOrderStatus(order, "active")}
+                        className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {statusLoadingId === order.id ? "处理中..." : "恢复 Pro"}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
