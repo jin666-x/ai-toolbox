@@ -1,51 +1,74 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-const plans = [
-  {
-    name: "Pro 月卡",
-    price: "¥19.9",
-    desc: "适合个人创作、日常办公和短期高频使用。",
-    highlight: "30 天有效",
-    dailyLimit: "每日 100 次",
-    recommend: true,
-  },
-  {
-    name: "Pro 年卡",
-    price: "¥199",
-    desc: "适合长期使用，平均每月更划算。",
-    highlight: "365 天有效",
-    dailyLimit: "每日 100 次",
-    recommend: false,
-  },
-  {
-    name: "试用 Pro",
-    price: "¥0",
-    desc: "适合先体验 Pro 能力，具体是否开放以人工确认为准。",
-    highlight: "7 天试用",
-    dailyLimit: "每日 100 次",
-    recommend: false,
-  },
-  {
-    name: "团队方案",
-    price: "联系确认",
-    desc: "适合团队、工作室或企业批量使用。",
-    highlight: "人工定制",
-    dailyLimit: "可定制额度",
-    recommend: false,
-  },
-];
 
 const paymentMethods = ["微信支付", "支付宝", "银行卡转账", "其他方式"];
 
-export default function CheckoutPage() {
-  const router = useRouter();
+type PublicSettings = {
+  customer_wechat?: string;
+  payment_notice?: string;
+  monthly_price?: string;
+  yearly_price?: string;
+  review_notice?: string;
+  site_announcement?: string;
+};
 
-  const [selectedPlan, setSelectedPlan] = useState(plans[0].name);
+type PublicSettingsResponse = {
+  success?: boolean;
+  settings?: PublicSettings;
+};
+
+const defaultSettings: Required<PublicSettings> = {
+  customer_wechat: "请填写客服微信",
+  payment_notice: "付款后请提交付款截图或填写已发客服微信。",
+  monthly_price: "¥19.9",
+  yearly_price: "¥199",
+  review_notice: "管理员确认付款后会为账号开通 Pro 权限。",
+  site_announcement: "AI Bot Pro 正在持续升级中。",
+};
+
+export default function CheckoutPage() {
+  const [settings, setSettings] = useState<Required<PublicSettings>>(
+    defaultSettings
+  );
+
+  const plans = useMemo(
+    () => [
+      {
+        name: "Pro 月卡",
+        price: settings.monthly_price,
+        desc: "适合短期体验和个人轻度使用",
+        highlight: "30 天有效",
+        dailyLimit: "每日 100 次",
+      },
+      {
+        name: "Pro 年卡",
+        price: settings.yearly_price,
+        desc: "适合长期使用，性价比更高",
+        highlight: "365 天有效",
+        dailyLimit: "每日 100 次",
+      },
+      {
+        name: "试用 Pro",
+        price: "¥0",
+        desc: "适合先体验 Pro 能力",
+        highlight: "7 天试用",
+        dailyLimit: "每日 100 次",
+      },
+      {
+        name: "团队方案",
+        price: "联系确认",
+        desc: "适合团队、工作室或企业使用",
+        highlight: "人工定制",
+        dailyLimit: "按需求定制",
+      },
+    ],
+    [settings.monthly_price, settings.yearly_price]
+  );
+
+  const [selectedPlan, setSelectedPlan] = useState("Pro 月卡");
   const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,12 +78,39 @@ export default function CheckoutPage() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const [loadingUser, setLoadingUser] = useState(true);
+  const [loadingSettings, setLoadingSettings] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
-  const currentPlan = plans.find((plan) => plan.name === selectedPlan) || plans[0];
-  const isLoggedIn = Boolean(userId);
+  const currentPlan = useMemo(() => {
+    return plans.find((item) => item.name === selectedPlan) || plans[0];
+  }, [plans, selectedPlan]);
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const res = await fetch("/api/settings", {
+          cache: "no-store",
+        });
+
+        const data = (await res.json()) as PublicSettingsResponse;
+
+        if (data.settings) {
+          setSettings({
+            ...defaultSettings,
+            ...data.settings,
+          });
+        }
+      } catch (error) {
+        console.error("读取站点配置失败：", error);
+      } finally {
+        setLoadingSettings(false);
+      }
+    }
+
+    loadSettings();
+  }, []);
 
   useEffect(() => {
     async function loadUser() {
@@ -73,7 +123,7 @@ export default function CheckoutPage() {
           setEmail(data.user.email || "");
         }
       } catch {
-        // 未登录也允许提交，后台会尝试按邮箱匹配账号
+        // 用户未登录也允许提交，后台可以按邮箱匹配账号
       } finally {
         setLoadingUser(false);
       }
@@ -92,17 +142,17 @@ export default function CheckoutPage() {
     const safePaymentProof = paymentProof.trim();
 
     if (!safeName) {
-      setError("请填写称呼，方便管理员确认。 ");
+      setError("请填写称呼，方便管理员确认。");
       return;
     }
 
     if (!safeEmail) {
-      setError("请填写邮箱，最好填写你的登录邮箱。 ");
+      setError("请填写邮箱，建议填写你的登录邮箱。");
       return;
     }
 
     if (!safePaymentProof) {
-      setError("请填写付款截图链接或付款凭证说明。 ");
+      setError("请填写付款截图链接或付款凭证说明。");
       return;
     }
 
@@ -119,11 +169,11 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           name: safeName,
           email: safeEmail,
-          company: company.trim(),
+          company,
           plan: selectedPlan,
           paymentMethod,
           paymentProof: safePaymentProof,
-          message: message.trim(),
+          message,
           userId,
         }),
       });
@@ -143,7 +193,7 @@ export default function CheckoutPage() {
       setPaymentProof("");
       setMessage("");
 
-      router.push("/checkout/success");
+      window.location.href = "/checkout/success";
     } catch (err) {
       setError(err instanceof Error ? err.message : "提交失败，请稍后再试。");
     } finally {
@@ -165,6 +215,10 @@ export default function CheckoutPage() {
             <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
               <Link href="/pricing" className="hover:text-white">
                 价格
+              </Link>
+
+              <Link href="/checkout" className="text-white">
+                升级 Pro
               </Link>
 
               <Link href="/dashboard" className="hover:text-white">
@@ -193,44 +247,33 @@ export default function CheckoutPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              选择套餐、完成付款、提交付款凭证。管理员确认后会为你的账号开通 Pro 权限。
+              当前为人工审核流程。提交付款信息后，管理员会在后台确认并为你的账号开通 Pro 权限。
             </p>
 
-            <div className="mt-8 grid max-w-4xl gap-3 md:grid-cols-3">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-5">
-                <div className="text-sm font-black text-emerald-200">第 1 步</div>
-                <div className="mt-2 text-lg font-black">选择套餐</div>
-                <p className="mt-2 text-sm leading-6 text-white/50">选择月卡、年卡或团队方案。</p>
+            {settings.site_announcement ? (
+              <div className="mt-6 max-w-2xl rounded-2xl border border-blue-300/20 bg-blue-500/10 p-4 text-sm leading-7 text-blue-100/80">
+                {settings.site_announcement}
               </div>
-
-              <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-5">
-                <div className="text-sm font-black text-emerald-200">第 2 步</div>
-                <div className="mt-2 text-lg font-black">完成付款</div>
-                <p className="mt-2 text-sm leading-6 text-white/50">按页面说明完成付款并保留凭证。</p>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-5">
-                <div className="text-sm font-black text-emerald-200">第 3 步</div>
-                <div className="mt-2 text-lg font-black">提交审核</div>
-                <p className="mt-2 text-sm leading-6 text-white/50">提交后等待管理员开通 Pro。</p>
-              </div>
-            </div>
+            ) : null}
           </div>
         </div>
       </section>
 
       <section className="relative mx-auto grid max-w-7xl gap-8 px-6 py-12 md:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-10">
-        <div className="space-y-6">
+        <div>
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-2xl font-black">选择套餐</h2>
 
-              <Link
-                href="/pricing"
-                className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white"
-              >
-                查看完整价格
-              </Link>
+              {loadingSettings ? (
+                <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/45">
+                  正在读取配置...
+                </div>
+              ) : (
+                <div className="rounded-full border border-emerald-300/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100">
+                  已读取后台配置
+                </div>
+              )}
             </div>
 
             <div className="mt-6 grid gap-4">
@@ -244,27 +287,17 @@ export default function CheckoutPage() {
                     onClick={() => setSelectedPlan(plan.name)}
                     className={`rounded-3xl border p-5 text-left transition ${
                       active
-                        ? "border-emerald-300/40 bg-emerald-500/15 shadow-2xl shadow-emerald-500/10"
+                        ? "border-emerald-300/40 bg-emerald-500/15"
                         : "border-white/10 bg-black/30 hover:bg-white/[0.06]"
                     }`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="text-xl font-black">{plan.name}</div>
-
-                          {plan.recommend ? (
-                            <span className="rounded-full border border-emerald-300/30 bg-emerald-500/15 px-3 py-1 text-xs font-black text-emerald-100">
-                              推荐
-                            </span>
-                          ) : null}
-                        </div>
-
+                        <div className="text-xl font-black">{plan.name}</div>
                         <div className="mt-2 text-sm leading-6 text-white/55">
                           {plan.desc}
                         </div>
-
-                        <div className="mt-3 inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/60">
+                        <div className="mt-2 text-xs font-bold text-white/40">
                           {plan.dailyLimit}
                         </div>
                       </div>
@@ -282,25 +315,89 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-emerald-400/20 bg-emerald-500/10 p-6">
-            <h2 className="text-xl font-black text-emerald-100">付款流程</h2>
+          <div className="mt-6 rounded-[2rem] border border-emerald-400/20 bg-emerald-500/10 p-6">
+            <h2 className="text-xl font-black text-emerald-100">
+              当前选择
+            </h2>
 
-            <div className="mt-4 space-y-3 text-sm leading-7 text-emerald-100/75">
-              <p>1. 先选择你要开通的套餐。</p>
-              <p>2. 按你选择的方式完成付款。</p>
-              <p>3. 在右侧填写付款截图链接，或者填写“已发客服微信”。</p>
-              <p>4. 管理员审核后，会在后台为你的账号开通 Pro。</p>
+            <div className="mt-4 rounded-3xl border border-white/10 bg-black/30 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-2xl font-black">{currentPlan.name}</div>
+                  <div className="mt-2 text-sm leading-6 text-white/55">
+                    {currentPlan.desc}
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-3xl font-black text-emerald-100">
+                    {currentPlan.price}
+                  </div>
+                  <div className="mt-1 text-xs text-white/45">
+                    {currentPlan.highlight}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-yellow-400/20 bg-yellow-500/10 p-6">
-            <h2 className="text-xl font-black text-yellow-100">重要提醒</h2>
+          <div className="mt-6 rounded-[2rem] border border-yellow-400/20 bg-yellow-500/10 p-6">
+            <h2 className="text-xl font-black text-yellow-100">付款流程</h2>
 
-            <div className="mt-4 space-y-2 text-sm leading-7 text-yellow-100/75">
-              <p>建议先登录账号再提交，这样后台可以直接绑定你的用户 ID。</p>
-              <p>如果未登录提交，请务必填写你的登录邮箱，后台会尝试按邮箱匹配账号。</p>
-              <p>付款凭证越清楚，审核开通速度越快。</p>
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-2xl border border-yellow-300/10 bg-black/25 p-4">
+                <div className="font-black text-yellow-100">1. 先完成付款</div>
+                <p className="mt-1 text-sm leading-6 text-yellow-100/70">
+                  按页面提示选择付款方式。付款金额以你选择的套餐为准。
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-yellow-300/10 bg-black/25 p-4">
+                <div className="font-black text-yellow-100">
+                  2. 填写付款凭证
+                </div>
+                <p className="mt-1 text-sm leading-6 text-yellow-100/70">
+                  可以填写截图链接，也可以填写“已发客服微信”。
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-yellow-300/10 bg-black/25 p-4">
+                <div className="font-black text-yellow-100">
+                  3. 等待审核开通
+                </div>
+                <p className="mt-1 text-sm leading-6 text-yellow-100/70">
+                  {settings.review_notice}
+                </p>
+              </div>
             </div>
+          </div>
+
+          <div className="mt-6 rounded-[2rem] border border-purple-400/20 bg-purple-500/10 p-6">
+            <h2 className="text-xl font-black text-purple-100">付款说明</h2>
+
+            <div className="mt-4 space-y-3 text-sm leading-7 text-purple-100/75">
+              <p>{settings.payment_notice}</p>
+
+              <p>
+                客服微信：
+                <span className="ml-1 font-black text-white">
+                  {settings.customer_wechat}
+                </span>
+              </p>
+
+              <p>
+                如果你还没有登录，建议先登录再提交，后台可以直接绑定你的用户 ID。
+              </p>
+            </div>
+
+            {!userId ? (
+              <Link
+                href="/login"
+                className="mt-4 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200"
+              >
+                先登录账号
+              </Link>
+            ) : null}
           </div>
         </div>
 
@@ -310,19 +407,10 @@ export default function CheckoutPage() {
             <p className="mt-2 text-sm text-white/50">
               {loadingUser
                 ? "正在读取登录状态..."
-                : isLoggedIn
+                : userId
                 ? "已检测到你的登录账号，提交后后台可直接开通。"
-                : "当前未检测到登录账号，建议先登录后再提交。"}
+                : "当前未检测到登录账号，后台会尝试按邮箱匹配。"}
             </p>
-
-            {!loadingUser && !isLoggedIn ? (
-              <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-500/10 p-4 text-sm leading-6 text-yellow-100/80">
-                你现在还没有登录。可以继续提交，但更建议先登录账号，避免后台匹配不到用户。
-                <Link href="/login" className="ml-1 font-black text-white underline underline-offset-4">
-                  去登录
-                </Link>
-              </div>
-            ) : null}
           </div>
 
           {error ? (
@@ -338,22 +426,12 @@ export default function CheckoutPage() {
           ) : null}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="rounded-3xl border border-emerald-300/20 bg-emerald-500/10 p-5">
-              <div className="text-sm text-emerald-100/60">当前选择</div>
-
-              <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <div className="text-2xl font-black text-emerald-100">
-                    {currentPlan.name}
-                  </div>
-                  <div className="mt-1 text-sm text-emerald-100/65">
-                    {currentPlan.highlight} · {currentPlan.dailyLimit}
-                  </div>
-                </div>
-
-                <div className="text-3xl font-black text-white">
-                  {currentPlan.price}
-                </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-white/70">
+                当前套餐
+              </label>
+              <div className="rounded-2xl border border-emerald-300/20 bg-emerald-500/10 px-4 py-3 font-black text-emerald-100">
+                {selectedPlan} · {currentPlan.price}
               </div>
             </div>
 
@@ -423,7 +501,8 @@ export default function CheckoutPage() {
 
             <div>
               <label className="mb-2 block text-sm font-bold text-white/70">
-                付款截图链接 / 付款凭证说明 <span className="text-red-300">*</span>
+                付款截图链接 / 付款凭证说明{" "}
+                <span className="text-red-300">*</span>
               </label>
               <textarea
                 value={paymentProof}
@@ -456,17 +535,17 @@ export default function CheckoutPage() {
             </button>
           </form>
 
-          <div className="mt-5 grid gap-3 text-center text-sm md:grid-cols-2">
+          <div className="mt-5 grid gap-3 text-center text-sm sm:grid-cols-2">
             <Link
               href="/dashboard"
-              className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 font-bold text-white/70 transition hover:bg-white/10 hover:text-white"
+              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white/70 transition hover:bg-white/10 hover:text-white"
             >
               返回会员中心
             </Link>
 
             <Link
               href="/chat"
-              className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 font-bold text-white/70 transition hover:bg-white/10 hover:text-white"
+              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white/70 transition hover:bg-white/10 hover:text-white"
             >
               先体验 AI 工具
             </Link>
