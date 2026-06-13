@@ -49,23 +49,31 @@ export async function POST(req: Request) {
     }
 
     if (!plan) {
-      return Response.json({ error: "请选择想了解的套餐。" }, { status: 400 });
+      return Response.json({ error: "请选择想开通的套餐。" }, { status: 400 });
     }
 
     if (!useCase) {
       return Response.json({ error: "请选择主要使用场景。" }, { status: 400 });
     }
 
-    if (message.length > 1000) {
+    if (message.length > 1500) {
       return Response.json(
-        { error: "补充说明太长了，最多 1000 个字。" },
+        { error: "补充说明太长了，最多 1500 个字。" },
         { status: 400 }
       );
     }
 
-    const createdAt = new Date().toISOString();
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const toEmail = process.env.CONTACT_TO_EMAIL;
+    const fromEmail =
+      process.env.CONTACT_FROM_EMAIL || "AI Bot Pro <noreply@aibotpro.top>";
 
-    console.log("AI Bot Pro 等待名单申请：", {
+    const createdAt = new Date().toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      hour12: false,
+    });
+
+    console.log("AI Bot Pro Pro 申请提交：", {
       name,
       email,
       company,
@@ -75,12 +83,9 @@ export async function POST(req: Request) {
       createdAt,
     });
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const toEmail = process.env.CONTACT_TO_EMAIL;
-    const fromEmail =
-      process.env.CONTACT_FROM_EMAIL || "AI Bot Pro <noreply@aibotpro.top>";
-
     if (!resendApiKey || !toEmail) {
+      console.warn("Pro 申请邮件未发送：缺少 RESEND_API_KEY 或 CONTACT_TO_EMAIL。");
+
       return Response.json({
         success: true,
         message:
@@ -103,30 +108,45 @@ export async function POST(req: Request) {
       to: [toEmail],
       subject: `AI Bot Pro 新的 Pro 申请：${plan}`,
       html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #111;">
-          <h2>AI Bot Pro 收到新的 Pro / 等待名单申请</h2>
+        <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #111; max-width: 680px;">
+          <h2 style="margin-bottom: 16px;">AI Bot Pro 收到新的 Pro 会员申请</h2>
 
-          <p><strong>提交时间：</strong>${safeCreatedAt}</p>
-          <p><strong>称呼：</strong>${safeName}</p>
-          <p><strong>邮箱：</strong>${safeEmail}</p>
-          <p><strong>公司 / 团队：</strong>${safeCompany}</p>
-          <p><strong>意向套餐：</strong>${safePlan}</p>
-          <p><strong>使用场景：</strong>${safeUseCase}</p>
+          <div style="padding: 16px; background: #f7f7f7; border-radius: 12px; margin-bottom: 16px;">
+            <p><strong>提交时间：</strong>${safeCreatedAt}</p>
+            <p><strong>称呼：</strong>${safeName}</p>
+            <p><strong>邮箱：</strong>${safeEmail}</p>
+            <p><strong>微信 / 公司 / 团队：</strong>${safeCompany}</p>
+            <p><strong>申请套餐：</strong>${safePlan}</p>
+            <p><strong>使用场景：</strong>${safeUseCase}</p>
+          </div>
 
-          <div style="margin-top: 20px; padding: 16px; background: #f5f5f5; border-radius: 12px;">
+          <div style="padding: 16px; background: #f5f5f5; border-radius: 12px;">
             <strong>补充说明：</strong>
             <p>${safeMessage}</p>
           </div>
 
-          <p style="margin-top: 24px; color: #666;">
-            这封邮件来自 AI Bot Pro 等待名单页面。
+          <p style="margin-top: 24px; color: #666; font-size: 13px;">
+            这封邮件来自 AI Bot Pro Pro 申请页面。
           </p>
         </div>
+      `,
+      text: `
+AI Bot Pro 收到新的 Pro 会员申请
+
+提交时间：${createdAt}
+称呼：${name}
+邮箱：${email}
+微信 / 公司 / 团队：${company || "未填写"}
+申请套餐：${plan}
+使用场景：${useCase}
+
+补充说明：
+${message || "未填写"}
       `,
     });
 
     if (error) {
-      console.error("Resend 等待名单邮件发送失败：", error);
+      console.error("Resend Pro 申请邮件发送失败：", error);
 
       return Response.json(
         { error: "申请已收到，但邮件通知发送失败。请稍后再试。" },
@@ -136,10 +156,10 @@ export async function POST(req: Request) {
 
     return Response.json({
       success: true,
-      message: "提交成功，我们已经收到你的申请，并已发送邮件通知。",
+      message: "提交成功，我们已经收到你的 Pro 申请，并已发送邮件通知。",
     });
   } catch (error) {
-    console.error("等待名单提交失败：", error);
+    console.error("Pro 申请提交失败：", error);
 
     return Response.json(
       { error: "提交失败，请稍后再试。" },

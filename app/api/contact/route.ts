@@ -56,7 +56,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const createdAt = new Date().toISOString();
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const toEmail = process.env.CONTACT_TO_EMAIL;
+    const fromEmail =
+      process.env.CONTACT_FROM_EMAIL || "AI Bot Pro <noreply@aibotpro.top>";
+
+    const createdAt = new Date().toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      hour12: false,
+    });
 
     console.log("AI Bot Pro 联系表单提交：", {
       email,
@@ -64,11 +72,6 @@ export async function POST(req: Request) {
       message,
       createdAt,
     });
-
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const toEmail = process.env.CONTACT_TO_EMAIL;
-    const fromEmail =
-      process.env.CONTACT_FROM_EMAIL || "AI Bot Pro <noreply@aibotpro.top>";
 
     if (!resendApiKey || !toEmail) {
       console.warn("联系表单邮件未发送：缺少 RESEND_API_KEY 或 CONTACT_TO_EMAIL。");
@@ -92,27 +95,39 @@ export async function POST(req: Request) {
       to: [toEmail],
       subject: `AI Bot Pro 新反馈：${type}`,
       html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #111;">
-          <h2>AI Bot Pro 收到新的联系表单</h2>
+        <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #111; max-width: 680px;">
+          <h2 style="margin-bottom: 16px;">AI Bot Pro 收到新的联系表单</h2>
 
-          <p><strong>提交时间：</strong>${safeCreatedAt}</p>
-          <p><strong>用户邮箱：</strong>${safeEmail}</p>
-          <p><strong>反馈类型：</strong>${safeType}</p>
+          <div style="padding: 16px; background: #f7f7f7; border-radius: 12px; margin-bottom: 16px;">
+            <p><strong>提交时间：</strong>${safeCreatedAt}</p>
+            <p><strong>用户邮箱：</strong>${safeEmail}</p>
+            <p><strong>反馈类型：</strong>${safeType}</p>
+          </div>
 
-          <div style="margin-top: 20px; padding: 16px; background: #f5f5f5; border-radius: 12px;">
+          <div style="padding: 16px; background: #f5f5f5; border-radius: 12px;">
             <strong>具体内容：</strong>
             <p>${safeMessage}</p>
           </div>
 
-          <p style="margin-top: 24px; color: #666;">
+          <p style="margin-top: 24px; color: #666; font-size: 13px;">
             这封邮件来自 AI Bot Pro 联系我们页面。
           </p>
         </div>
       `,
+      text: `
+AI Bot Pro 收到新的联系表单
+
+提交时间：${createdAt}
+用户邮箱：${email}
+反馈类型：${type}
+
+具体内容：
+${message}
+      `,
     });
 
     if (error) {
-      console.error("Resend 邮件发送失败：", error);
+      console.error("Resend 联系表单邮件发送失败：", error);
 
       return Response.json(
         {
