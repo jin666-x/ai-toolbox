@@ -10,7 +10,7 @@ export async function GET() {
         "id, application_id, user_id, email, name, plan_name, amount_cents, currency, daily_limit, expired_at, status, source, email_sent, created_at, updated_at"
       )
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(300);
 
     if (error) {
       console.error("读取 Pro 开通记录失败：", error);
