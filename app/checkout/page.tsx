@@ -83,10 +83,13 @@ export default function CheckoutPage() {
   const [company, setCompany] = useState("");
   const [paymentProof, setPaymentProof] = useState("");
   const [message, setMessage] = useState("");
+  const [proofFileUrl, setProofFileUrl] = useState("");
+  const [proofFileName, setProofFileName] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
 
   const [loadingUser, setLoadingUser] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
+  const [uploadingProof, setUploadingProof] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -140,6 +143,54 @@ export default function CheckoutPage() {
     loadUser();
   }, []);
 
+  async function handleUploadProof(file: File) {
+    if (!file) return;
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      setError("付款截图只支持 PNG、JPG、WEBP 图片。");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("付款截图不能超过 5MB。");
+      return;
+    }
+
+    setUploadingProof(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload-payment-proof", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = (await res.json()) as {
+        success?: boolean;
+        url?: string;
+        error?: string;
+      };
+
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || "上传付款截图失败。");
+      }
+
+      setProofFileUrl(data.url);
+      setProofFileName(file.name);
+      setNotice("付款截图上传成功，填写信息后即可提交审核。");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "上传付款截图失败。");
+    } finally {
+      setUploadingProof(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -148,6 +199,12 @@ export default function CheckoutPage() {
     const safeName = name.trim();
     const safeEmail = email.trim();
     const safePaymentProof = paymentProof.trim();
+    const finalPaymentProof = [
+      proofFileUrl ? `付款截图：${proofFileUrl}` : "",
+      safePaymentProof ? `补充凭证：${safePaymentProof}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     if (!safeName) {
       setError("请填写称呼，方便管理员确认。");
@@ -159,8 +216,8 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!safePaymentProof) {
-      setError("请填写付款截图链接或付款凭证说明。");
+    if (!finalPaymentProof) {
+      setError("请上传付款截图，或填写付款凭证说明。");
       return;
     }
 
@@ -180,7 +237,7 @@ export default function CheckoutPage() {
           company,
           plan: selectedPlan,
           paymentMethod,
-          paymentProof: safePaymentProof,
+          paymentProof: finalPaymentProof,
           message,
           userId,
         }),
@@ -199,6 +256,8 @@ export default function CheckoutPage() {
       setNotice(data.message || "提交成功，请等待人工审核。");
       setError("");
       setPaymentProof("");
+      setProofFileUrl("");
+      setProofFileName("");
       setMessage("");
 
       window.location.href = "/checkout/success";
@@ -565,14 +624,65 @@ export default function CheckoutPage() {
 
             <div>
               <label className="mb-2 block text-sm font-bold text-white/70">
-                付款截图链接 / 付款凭证说明{" "}
-                <span className="text-red-300">*</span>
+                上传付款截图 <span className="text-red-300">*</span>
+              </label>
+
+              <div className="rounded-3xl border border-white/10 bg-black/30 p-4">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={uploadingProof}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+
+                    if (file) {
+                      handleUploadProof(file);
+                    }
+                  }}
+                  className="block w-full cursor-pointer rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white file:mr-4 file:cursor-pointer file:rounded-xl file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-black file:text-black hover:file:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+
+                <p className="mt-3 text-xs leading-6 text-white/45">
+                  支持 PNG / JPG / WEBP，最大 5MB。上传成功后，后台会看到图片链接。
+                </p>
+
+                {uploadingProof ? (
+                  <div className="mt-4 rounded-2xl border border-blue-300/20 bg-blue-500/10 p-4 text-sm font-bold text-blue-100">
+                    正在上传付款截图...
+                  </div>
+                ) : null}
+
+                {proofFileUrl ? (
+                  <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-500/10 p-4">
+                    <div className="mb-3 text-sm font-black text-emerald-100">
+                      上传成功：{proofFileName || "付款截图"}
+                    </div>
+
+                    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white p-2">
+                      <img
+                        src={proofFileUrl}
+                        alt="付款截图"
+                        className="max-h-80 w-full rounded-xl object-contain"
+                      />
+                    </div>
+
+                    <div className="mt-3 break-all text-xs leading-6 text-emerald-100/70">
+                      {proofFileUrl}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-white/70">
+                付款凭证说明
               </label>
               <textarea
                 value={paymentProof}
                 onChange={(event) => setPaymentProof(event.target.value)}
                 rows={4}
-                placeholder="比如：截图链接，或者填写：已发客服微信，付款备注为 xxx"
+                placeholder="选填，比如：已付款，付款备注是你的邮箱，或者已发客服微信"
                 className="w-full resize-none rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition placeholder:text-white/25 focus:border-white/30"
               />
             </div>
@@ -592,10 +702,10 @@ export default function CheckoutPage() {
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || uploadingProof}
               className="w-full rounded-2xl bg-white px-6 py-4 font-black text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitting ? "提交中..." : "提交付款确认"}
+              {uploadingProof ? "截图上传中..." : submitting ? "提交中..." : "提交付款确认"}
             </button>
           </form>
 
