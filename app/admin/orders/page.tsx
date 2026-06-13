@@ -128,22 +128,13 @@ export default function AdminOrdersPage() {
         throw new Error(data.error || "检查失败");
       }
 
-      const successMessage = data.message || "检查完成。";
-
-      setNotice(successMessage);
-      alert(successMessage);
-
       await loadOrders({
         clearMessage: false,
       });
 
-      setNotice(successMessage);
+      setNotice(data.message || "检查完成。");
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "检查失败，请稍后再试。";
-
-      setError(errorMessage);
-      alert(errorMessage);
+      setError(err instanceof Error ? err.message : "检查失败，请稍后再试。");
     } finally {
       setExpireLoading(false);
     }
