@@ -131,6 +131,26 @@ function getPlanTag(plan: string) {
   };
 }
 
+function extractUrls(value: string) {
+  const matches = value.match(/https?:\/\/[^\s"'<>]+|\/[^\s"'<>]+\.(?:png|jpg|jpeg|webp)/gi);
+
+  return (matches || []).map((item) =>
+    item.replace(/[，。；;,.]+$/g, "").trim()
+  );
+}
+
+function isImageUrl(value: string) {
+  const cleanValue = value.split("?")[0].toLowerCase();
+
+  return (
+    cleanValue.endsWith(".png") ||
+    cleanValue.endsWith(".jpg") ||
+    cleanValue.endsWith(".jpeg") ||
+    cleanValue.endsWith(".webp") ||
+    value.includes("/storage/v1/object/public/payment-proofs/")
+  );
+}
+
 function parsePaymentMessage(message: string | null, useCase: string) {
   const raw = message || "";
   const isPayment =
@@ -153,11 +173,23 @@ function parsePaymentMessage(message: string | null, useCase: string) {
     useCase.replace("付款确认 -", "").trim() ||
     "未识别";
 
-  const paymentProof =
-    lines
-      .find((line) => line.startsWith("付款凭证："))
-      ?.replace("付款凭证：", "")
-      .trim() || "未填写";
+  const paymentProofLines = lines
+    .filter(
+      (line) =>
+        line.startsWith("付款凭证：") ||
+        line.startsWith("付款截图：") ||
+        line.startsWith("补充凭证：")
+    )
+    .map((line) =>
+      line
+        .replace("付款凭证：", "")
+        .replace("付款截图：", "")
+        .replace("补充凭证：", "")
+        .trim()
+    )
+    .filter(Boolean);
+
+  const paymentProof = paymentProofLines.join("\n") || "未填写";
 
   const extraMessage =
     lines
@@ -165,10 +197,15 @@ function parsePaymentMessage(message: string | null, useCase: string) {
       ?.replace("补充说明：", "")
       .trim() || "未填写";
 
+  const urls = Array.from(new Set(extractUrls(`${raw}\n${paymentProof}`)));
+  const imageUrls = urls.filter((url) => isImageUrl(url));
+
   return {
     paymentMethod,
     paymentProof,
     extraMessage,
+    urls,
+    imageUrls,
   };
 }
 
@@ -177,7 +214,7 @@ function isPaymentApplication(item: ProApplication) {
 }
 
 function isLink(value: string) {
-  return value.startsWith("http://") || value.startsWith("https://");
+  return value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/");
 }
 
 export default function AdminSubmissionsPage() {
@@ -220,6 +257,7 @@ export default function AdminSubmissionsPage() {
       paymentInfo?.paymentMethod || "",
       paymentInfo?.paymentProof || "",
       paymentInfo?.extraMessage || "",
+      paymentInfo?.urls.join(" ") || "",
     ]
       .join(" ")
       .toLowerCase();
@@ -432,6 +470,16 @@ export default function AdminSubmissionsPage() {
     }
   }
 
+  async function copyImageLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setNotice("截图链接已复制。");
+      setError("");
+    } catch {
+      setError("复制失败，请手动选中截图链接复制。");
+    }
+  }
+
   async function handleLogout() {
     try {
       await fetch("/api/admin/logout", {
@@ -472,6 +520,10 @@ export default function AdminSubmissionsPage() {
 
               <Link href="/admin/orders" className="hover:text-white">
                 开通记录
+              </Link>
+
+              <Link href="/admin/settings" className="hover:text-white">
+                后台配置
               </Link>
 
               <Link href="/dashboard" className="hover:text-white">
@@ -746,20 +798,9 @@ export default function AdminSubmissionsPage() {
                                 <span className="text-emerald-100/45">
                                   付款凭证：
                                 </span>
-                                {isLink(paymentInfo.paymentProof) ? (
-                                  <a
-                                    href={paymentInfo.paymentProof}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="break-all text-white underline underline-offset-4"
-                                  >
-                                    打开截图链接
-                                  </a>
-                                ) : (
-                                  <span className="break-all">
-                                    {paymentInfo.paymentProof}
-                                  </span>
-                                )}
+                                <span className="break-all whitespace-pre-wrap">
+                                  {paymentInfo.paymentProof}
+                                </span>
                               </div>
 
                               <div className="md:col-span-2">
@@ -770,6 +811,101 @@ export default function AdminSubmissionsPage() {
                               </div>
                             </div>
                           </div>
+
+                          {paymentInfo.imageUrls.length > 0 ? (
+                            <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4">
+                              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                <div className="text-sm font-black text-blue-100">
+                                  付款截图预览
+                                </div>
+
+                                <div className="rounded-full border border-blue-300/20 bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-100">
+                                  {paymentInfo.imageUrls.length} 张截图
+                                </div>
+                              </div>
+
+                              <div className="grid gap-4">
+                                {paymentInfo.imageUrls.map((url, index) => (
+                                  <div
+                                    key={`${url}-${index}`}
+                                    className="rounded-2xl border border-white/10 bg-black/30 p-3"
+                                  >
+                                    <a
+                                      href={url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="block overflow-hidden rounded-xl border border-white/10 bg-white p-2"
+                                    >
+                                      <img
+                                        src={url}
+                                        alt={`付款截图 ${index + 1}`}
+                                        className="max-h-96 w-full rounded-lg object-contain"
+                                      />
+                                    </a>
+
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                      <a
+                                        href={url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="rounded-full border border-white/10 bg-white px-4 py-2 text-xs font-black text-black transition hover:bg-zinc-200"
+                                      >
+                                        查看原图
+                                      </a>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => copyImageLink(url)}
+                                        className="rounded-full border border-blue-300/20 bg-blue-500/10 px-4 py-2 text-xs font-bold text-blue-100 transition hover:bg-blue-500/20"
+                                      >
+                                        复制截图链接
+                                      </button>
+                                    </div>
+
+                                    <div className="mt-3 break-all rounded-xl border border-white/10 bg-black/40 p-3 text-xs leading-6 text-white/45">
+                                      {url}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : paymentInfo.urls.length > 0 ? (
+                            <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4">
+                              <div className="mb-3 text-sm font-black text-blue-100">
+                                付款相关链接
+                              </div>
+
+                              <div className="space-y-2">
+                                {paymentInfo.urls.map((url, index) => (
+                                  <div
+                                    key={`${url}-${index}`}
+                                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 p-3"
+                                  >
+                                    <a
+                                      href={url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="break-all text-sm text-white underline underline-offset-4"
+                                    >
+                                      {url}
+                                    </a>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => copyImageLink(url)}
+                                      className="rounded-full border border-blue-300/20 bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-100 transition hover:bg-blue-500/20"
+                                    >
+                                      复制链接
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="rounded-2xl border border-yellow-400/20 bg-yellow-500/10 p-4 text-sm leading-7 text-yellow-100/75">
+                              这条付款确认没有识别到截图链接。请查看付款凭证和原始内容。
+                            </div>
+                          )}
 
                           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs leading-6 text-white/40">
                             原始内容：
