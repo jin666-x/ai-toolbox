@@ -105,10 +105,12 @@ export default function CheckoutPage() {
         throw new Error(data.error || "提交失败，请稍后再试。");
       }
 
-      setNotice(data.message || "提交成功，请等待人工审核。");
-      setError("");
-      setPaymentProof("");
-      setMessage("");
+   setNotice(data.message || "提交成功，请等待人工审核。");
+setError("");
+setPaymentProof("");
+setMessage("");
+
+window.location.href = "/checkout/success";
     } catch (err) {
       setError(err instanceof Error ? err.message : "提交失败，请稍后再试。");
     } finally {
