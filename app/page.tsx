@@ -64,15 +64,42 @@ const tools = [
 ];
 
 const steps = [
-  "选择你需要的 AI 工具",
-  "输入一句简单需求",
-  "AI 自动生成可直接使用的结果",
+  {
+    title: "选择工具",
+    desc: "聊天、文案、标题、广告、脚本、SEO、日报等工具一站集成。",
+  },
+  {
+    title: "输入需求",
+    desc: "不用会提示词，只需要输入主题、产品、问题或工作内容。",
+  },
+  {
+    title: "生成结果",
+    desc: "AI 自动按对应工具格式输出，可直接复制、修改和发布。",
+  },
+];
+
+const planCards = [
+  {
+    name: "未登录体验",
+    limit: "5 次/天",
+    desc: "适合快速体验 AI 工具箱基础能力。",
+  },
+  {
+    name: "Free 免费版",
+    limit: "10 次/天",
+    desc: "注册登录后自动获得每日 10 次额度。",
+  },
+  {
+    name: "Pro 会员版",
+    limit: "100 次/天",
+    desc: "适合高频创作、短视频运营、广告文案和办公提效。",
+  },
 ];
 
 export default function HomePage() {
   return (
     <main className="min-h-screen overflow-hidden bg-black text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.2),transparent_35%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.24),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.22),transparent_35%)]" />
 
       <header className="relative mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
         <Link href="/" className="text-2xl font-black tracking-tight">
@@ -84,8 +111,12 @@ export default function HomePage() {
             工具
           </a>
 
+          <a href="#plans" className="hover:text-white">
+            额度
+          </a>
+
           <a href="#steps" className="hover:text-white">
-            使用流程
+            流程
           </a>
 
           <Link href="/pricing" className="hover:text-white">
@@ -93,15 +124,11 @@ export default function HomePage() {
           </Link>
 
           <Link href="/waitlist" className="hover:text-white">
-            等待名单
+            申请 Pro
           </Link>
 
           <Link href="/dashboard" className="hover:text-white">
             会员中心
-          </Link>
-
-          <Link href="/login" className="hover:text-white">
-            登录
           </Link>
         </nav>
 
@@ -117,7 +144,7 @@ export default function HomePage() {
             href="/chat"
             className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
           >
-            免费体验
+            立即使用
           </Link>
         </div>
       </header>
@@ -128,17 +155,16 @@ export default function HomePage() {
         </div>
 
         <h1 className="max-w-5xl text-5xl font-black leading-tight tracking-tight md:text-7xl">
-          一个网站，搞定你的
+          一个网站，
           <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            {" "}
-            AI 创作需求
+            搞定你的 AI 创作需求
           </span>
         </h1>
 
         <p className="mt-8 max-w-3xl text-lg leading-8 text-zinc-400 md:text-xl">
           AI Bot Pro 集成文案生成、标题创作、广告优化、短视频脚本、SEO
           文章、日报周报、代码辅助等常用工具。不需要会写提示词，输入简单需求，
-          AI 自动帮你生成结果。
+          AI 自动帮你生成可直接使用的结果。
         </p>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -146,38 +172,43 @@ export default function HomePage() {
             href="/chat"
             className="rounded-2xl bg-white px-8 py-4 text-lg font-black text-black transition hover:bg-zinc-200"
           >
-            立即开始使用
+            进入 AI 工具箱
+          </Link>
+
+          <Link
+            href="/pricing"
+            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-bold text-white transition hover:bg-white/10"
+          >
+            查看套餐价格
           </Link>
 
           <Link
             href="/waitlist"
-            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-bold text-white transition hover:bg-white/10"
+            className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 text-lg font-bold text-purple-100 transition hover:bg-purple-500/30"
           >
-            加入 Pro 等待名单
+            申请 Pro 会员
           </Link>
-
-          <a
-            href="#tools"
-            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-bold text-white transition hover:bg-white/10"
-          >
-            查看工具
-          </a>
         </div>
 
-        <div className="mt-12 grid w-full max-w-4xl gap-4 text-left md:grid-cols-3">
+        <div className="mt-12 grid w-full max-w-5xl gap-4 text-left md:grid-cols-4">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
             <div className="text-3xl font-black">10+</div>
             <div className="mt-2 text-zinc-400">常用 AI 工具</div>
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <div className="text-3xl font-black">10 秒</div>
-            <div className="mt-2 text-zinc-400">快速生成结果</div>
+            <div className="text-3xl font-black">5 次</div>
+            <div className="mt-2 text-zinc-400">未登录免费体验</div>
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <div className="text-3xl font-black">0 门槛</div>
-            <div className="mt-2 text-zinc-400">不会提示词也能用</div>
+            <div className="text-3xl font-black">10 次</div>
+            <div className="mt-2 text-zinc-400">Free 账号每日额度</div>
+          </div>
+
+          <div className="rounded-3xl border border-purple-300/20 bg-purple-500/10 p-6 backdrop-blur-xl">
+            <div className="text-3xl font-black text-purple-100">100 次</div>
+            <div className="mt-2 text-purple-100/70">Pro 会员每日额度</div>
           </div>
         </div>
       </section>
@@ -187,11 +218,11 @@ export default function HomePage() {
           <div className="mb-4 text-sm font-bold text-blue-400">AI TOOLS</div>
 
           <h2 className="text-4xl font-black md:text-5xl">
-            10+ 常用工具，一站集成
+            常用 AI 工具，一站集成
           </h2>
 
           <p className="mt-5 text-zinc-400">
-            不用到处找工具，一个页面就能完成大部分 AI 创作、办公和运营需求。
+            不用到处找工具，一个页面就能完成大部分创作、办公和运营需求。
           </p>
         </div>
 
@@ -215,6 +246,63 @@ export default function HomePage() {
               </div>
             </Link>
           ))}
+        </div>
+      </section>
+
+      <section id="plans" className="relative mx-auto max-w-7xl px-6 py-20">
+        <div className="mb-12 text-center">
+          <div className="mb-4 text-sm font-bold text-purple-300">
+            USAGE LIMIT
+          </div>
+
+          <h2 className="text-4xl font-black md:text-5xl">
+            从免费体验到 Pro 高频使用
+          </h2>
+
+          <p className="mt-5 text-zinc-400">
+            先免费体验，登录后获得更多额度，需要高频使用可申请 Pro 会员。
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {planCards.map((plan) => (
+            <div
+              key={plan.name}
+              className={`rounded-[2rem] border p-8 backdrop-blur-xl ${
+                plan.name.includes("Pro")
+                  ? "border-purple-300/30 bg-purple-500/10"
+                  : "border-white/10 bg-white/5"
+              }`}
+            >
+              <div className="text-xl font-black">{plan.name}</div>
+
+              <div
+                className={`mt-5 text-5xl font-black ${
+                  plan.name.includes("Pro") ? "text-purple-100" : "text-white"
+                }`}
+              >
+                {plan.limit}
+              </div>
+
+              <p className="mt-5 leading-7 text-zinc-400">{plan.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
+          <Link
+            href="/pricing"
+            className="inline-flex rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
+          >
+            查看套餐价格
+          </Link>
+
+          <Link
+            href="/waitlist"
+            className="inline-flex rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 font-black text-purple-100 transition hover:bg-purple-500/30"
+          >
+            申请 Pro 会员
+          </Link>
         </div>
       </section>
 
@@ -242,14 +330,17 @@ export default function HomePage() {
             <div className="space-y-4">
               {steps.map((step, index) => (
                 <div
-                  key={step}
-                  className="flex items-center gap-4 rounded-3xl border border-white/10 bg-black/30 p-5"
+                  key={step.title}
+                  className="flex items-start gap-4 rounded-3xl border border-white/10 bg-black/30 p-5"
                 >
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-xl font-black text-black">
                     {index + 1}
                   </div>
 
-                  <div className="text-lg font-bold">{step}</div>
+                  <div>
+                    <div className="text-lg font-black">{step.title}</div>
+                    <p className="mt-1 leading-7 text-zinc-400">{step.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -257,7 +348,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="start" className="relative mx-auto max-w-7xl px-6 py-24">
+      <section className="relative mx-auto max-w-7xl px-6 py-24">
         <div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-10 text-center backdrop-blur-xl md:p-16">
           <h2 className="text-4xl font-black md:text-6xl">
             现在就开始使用 AI Bot Pro
@@ -265,7 +356,7 @@ export default function HomePage() {
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
             输入一个关键词，AI 自动生成文案、标题、广告词、短视频脚本、
-            SEO文章和工作汇报。适合自媒体、运营、销售、创业者和普通办公用户。
+            SEO 文章和工作汇报。适合自媒体、运营、销售、创业者和办公用户。
           </p>
 
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
@@ -277,17 +368,17 @@ export default function HomePage() {
             </Link>
 
             <Link
-              href="/pricing"
+              href="/dashboard"
               className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-10 py-4 text-lg font-black text-white transition hover:bg-white/10"
             >
-              查看套餐价格
+              查看会员中心
             </Link>
 
             <Link
               href="/waitlist"
-              className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-10 py-4 text-lg font-black text-white transition hover:bg-white/10"
+              className="inline-flex rounded-2xl border border-purple-300/30 bg-purple-500/20 px-10 py-4 text-lg font-black text-purple-100 transition hover:bg-purple-500/30"
             >
-              加入等待名单
+              申请 Pro
             </Link>
           </div>
         </div>
@@ -316,7 +407,7 @@ export default function HomePage() {
           </Link>
 
           <Link href="/waitlist" className="transition hover:text-white">
-            等待名单
+            申请 Pro
           </Link>
 
           <Link href="/dashboard" className="transition hover:text-white">
