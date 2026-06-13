@@ -91,8 +91,16 @@ export default function AdminPlansPage() {
             </Link>
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
-              <Link href="/" className="hover:text-white">
-                首页
+              <Link href="/admin/plans" className="text-white">
+                套餐管理
+              </Link>
+
+              <Link href="/admin/submissions" className="hover:text-white">
+                提交记录
+              </Link>
+
+              <Link href="/admin/orders" className="hover:text-white">
+                开通记录
               </Link>
 
               <Link href="/dashboard" className="hover:text-white">
@@ -275,7 +283,7 @@ export default function AdminPlansPage() {
           <div className="rounded-[2rem] border border-yellow-500/20 bg-yellow-500/10 p-6 text-yellow-100">
             <h2 className="text-xl font-black">注意</h2>
             <p className="mt-3 text-sm leading-7 text-yellow-100/80">
-              这个页面不要放到导航栏里，只给你自己用。当前后台已经加了二次访问保护，
+              这个页面不要放到公开导航栏里，只给你自己用。当前后台已经加了二次访问保护，
               退出后台后需要重新通过 admin_key 进入。
             </p>
           </div>

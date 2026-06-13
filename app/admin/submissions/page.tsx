@@ -268,6 +268,10 @@ export default function AdminSubmissionsPage() {
                 提交记录
               </Link>
 
+              <Link href="/admin/orders" className="hover:text-white">
+                开通记录
+              </Link>
+
               <Link href="/dashboard" className="hover:text-white">
                 会员中心
               </Link>
@@ -317,6 +321,13 @@ export default function AdminSubmissionsPage() {
                 className="rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-black text-white transition hover:bg-white/10"
               >
                 去开通套餐
+              </Link>
+
+              <Link
+                href="/admin/orders"
+                className="rounded-2xl border border-emerald-300/20 bg-emerald-500/10 px-6 py-3 font-black text-emerald-100 transition hover:bg-emerald-500/20"
+              >
+                查看开通记录
               </Link>
             </div>
           </div>
