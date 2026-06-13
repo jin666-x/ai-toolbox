@@ -1,3 +1,4 @@
+import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type ProApplication = {
@@ -35,10 +36,121 @@ function getExpiredAt(planText: string) {
   return null;
 }
 
+function formatExpiredAt(value: string | null) {
+  if (!value) {
+    return "长期有效 / 暂未设置到期时间";
+  }
+
+  try {
+    return new Date(value).toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      hour12: false,
+    });
+  } catch {
+    return value;
+  }
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function sendProApprovedEmail(params: {
+  email: string;
+  name: string;
+  plan: string;
+  dailyLimit: number;
+  expiredAt: string | null;
+}) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const fromEmail =
+    process.env.CONTACT_FROM_EMAIL || "AI Bot Pro <noreply@aibotpro.top>";
+
+  if (!resendApiKey) {
+    console.warn("Pro 开通通知邮件未发送：缺少 RESEND_API_KEY。");
+    return {
+      sent: false,
+      reason: "缺少 RESEND_API_KEY",
+    };
+  }
+
+  const resend = new Resend(resendApiKey);
+
+  const safeName = escapeHtml(params.name || "用户");
+  const safePlan = escapeHtml(params.plan);
+  const safeDailyLimit = escapeHtml(String(params.dailyLimit));
+  const safeExpiredAt = escapeHtml(formatExpiredAt(params.expiredAt));
+
+  const { error } = await resend.emails.send({
+    from: fromEmail,
+    to: [params.email],
+    subject: "你的 AI Bot Pro Pro 会员已开通",
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #111; max-width: 680px;">
+        <h2 style="margin-bottom: 16px;">AI Bot Pro Pro 会员已开通</h2>
+
+        <p>${safeName}，你好：</p>
+
+        <p>
+          你的 AI Bot Pro Pro 会员已经开通成功，现在可以登录账号使用 Pro 权限。
+        </p>
+
+        <div style="padding: 16px; background: #f7f7f7; border-radius: 12px; margin: 20px 0;">
+          <p><strong>开通套餐：</strong>${safePlan}</p>
+          <p><strong>每日额度：</strong>${safeDailyLimit} 次</p>
+          <p><strong>到期时间：</strong>${safeExpiredAt}</p>
+        </div>
+
+        <p>
+          你可以登录会员中心查看当前套餐状态和每日剩余次数。
+        </p>
+
+        <p>
+          会员中心：<a href="https://aibotpro.top/dashboard">https://aibotpro.top/dashboard</a>
+        </p>
+
+        <p style="margin-top: 24px; color: #666; font-size: 13px;">
+          这封邮件由 AI Bot Pro 系统自动发送。
+        </p>
+      </div>
+    `,
+    text: `
+AI Bot Pro Pro 会员已开通
+
+${params.name || "用户"}，你好：
+
+你的 AI Bot Pro Pro 会员已经开通成功。
+
+开通套餐：${params.plan}
+每日额度：${params.dailyLimit} 次
+到期时间：${formatExpiredAt(params.expiredAt)}
+
+你可以登录会员中心查看当前套餐状态和每日剩余次数：
+https://aibotpro.top/dashboard
+    `,
+  });
+
+  if (error) {
+    console.error("Pro 开通通知邮件发送失败：", error);
+    return {
+      sent: false,
+      reason: "Resend 发送失败",
+    };
+  }
+
+  return {
+    sent: true,
+  };
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-
     const applicationId = String(body.applicationId || "").trim();
 
     if (!applicationId) {
@@ -75,12 +187,13 @@ export async function POST(req: Request) {
     }
 
     const expiredAt = getExpiredAt(application.plan);
+    const dailyLimit = 100;
 
     const { error: planError } = await supabase.from("user_plans").upsert(
       {
         user_id: application.user_id,
         plan: "pro",
-        daily_limit: 100,
+        daily_limit: dailyLimit,
         expired_at: expiredAt,
         updated_at: new Date().toISOString(),
       },
@@ -122,14 +235,25 @@ export async function POST(req: Request) {
       );
     }
 
+    const emailResult = await sendProApprovedEmail({
+      email: application.email,
+      name: application.name,
+      plan: application.plan,
+      dailyLimit,
+      expiredAt,
+    });
+
     return Response.json({
       success: true,
-      message: "已成功一键开通 Pro。",
+      message: emailResult.sent
+        ? "已成功一键开通 Pro，并已发送邮件通知用户。"
+        : "已成功一键开通 Pro，但邮件通知未发送，请检查 Resend 配置。",
       application: updatedApplication,
+      emailSent: emailResult.sent,
       plan: {
         userId: application.user_id,
         plan: "pro",
-        dailyLimit: 100,
+        dailyLimit,
         expiredAt,
       },
     });
