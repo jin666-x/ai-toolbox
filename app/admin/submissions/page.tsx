@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type ApplicationStatus = "pending" | "contacted" | "approved" | "rejected";
+type ApplicationFilter =
+  | "all"
+  | "pending"
+  | "approved"
+  | "payment"
+  | "normal"
+  | "missing_user_id";
 
 type ProApplication = {
   id: string;
@@ -164,6 +171,10 @@ function parsePaymentMessage(message: string | null, useCase: string) {
   };
 }
 
+function isPaymentApplication(item: ProApplication) {
+  return Boolean(parsePaymentMessage(item.message, item.use_case));
+}
+
 function isLink(value: string) {
   return value.startsWith("http://") || value.startsWith("https://");
 }
@@ -171,11 +182,61 @@ function isLink(value: string) {
 export default function AdminSubmissionsPage() {
   const [applications, setApplications] = useState<ProApplication[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [applicationFilter, setApplicationFilter] =
+    useState<ApplicationFilter>("all");
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
   const [approvingId, setApprovingId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  const filteredApplications = applications.filter((item) => {
+    if (applicationFilter === "all") return true;
+    if (applicationFilter === "pending") return item.status === "pending";
+    if (applicationFilter === "approved") return item.status === "approved";
+    if (applicationFilter === "payment") return isPaymentApplication(item);
+    if (applicationFilter === "normal") return !isPaymentApplication(item);
+    if (applicationFilter === "missing_user_id") return !item.user_id;
+
+    return true;
+  });
+
+  const filterOptions: {
+    key: ApplicationFilter;
+    label: string;
+    count: number;
+  }[] = [
+    {
+      key: "all",
+      label: "全部",
+      count: applications.length,
+    },
+    {
+      key: "pending",
+      label: "待处理",
+      count: applications.filter((item) => item.status === "pending").length,
+    },
+    {
+      key: "approved",
+      label: "已开通",
+      count: applications.filter((item) => item.status === "approved").length,
+    },
+    {
+      key: "payment",
+      label: "付款确认",
+      count: applications.filter((item) => isPaymentApplication(item)).length,
+    },
+    {
+      key: "normal",
+      label: "普通申请",
+      count: applications.filter((item) => !isPaymentApplication(item)).length,
+    },
+    {
+      key: "missing_user_id",
+      label: "无用户 ID",
+      count: applications.filter((item) => !item.user_id).length,
+    },
+  ];
 
   async function loadData() {
     setLoading(true);
@@ -418,7 +479,7 @@ export default function AdminSubmissionsPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              这里会显示用户提交的 Pro 会员申请、付款确认和联系反馈，支持一键开通、按邮箱开通、标记状态和复制用户 ID。
+              这里会显示用户提交的 Pro 会员申请、付款确认和联系反馈，支持筛选、一键开通、按邮箱开通、标记状态和复制用户 ID。
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -464,12 +525,36 @@ export default function AdminSubmissionsPage() {
 
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
-            <div className="mb-6 flex items-center justify-between gap-4">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <h2 className="text-2xl font-black">Pro 申请记录</h2>
 
               <div className="rounded-full border border-purple-300/20 bg-purple-500/10 px-3 py-1 text-sm font-bold text-purple-100">
-                {applications.length} 条
+                {filteredApplications.length} / {applications.length} 条
               </div>
+            </div>
+
+            <div className="mb-6 flex flex-wrap gap-2">
+              {filterOptions.map((item) => {
+                const active = applicationFilter === item.key;
+
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setApplicationFilter(item.key)}
+                    className={`rounded-full border px-4 py-2 text-xs font-black transition ${
+                      active
+                        ? "border-white bg-white text-black"
+                        : "border-white/10 bg-black/30 text-white/60 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {item.label}
+                    <span className={active ? "ml-2 text-black/60" : "ml-2 text-white/35"}>
+                      {item.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {loading ? (
@@ -480,9 +565,13 @@ export default function AdminSubmissionsPage() {
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/60">
                 暂时没有 Pro 申请记录。
               </div>
+            ) : filteredApplications.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/60">
+                当前筛选条件下没有记录。
+              </div>
             ) : (
               <div className="space-y-4">
-                {applications.map((item) => {
+                {filteredApplications.map((item) => {
                   const currentStatus =
                     statusMap[item.status] || statusMap.pending;
                   const planTag = getPlanTag(item.plan);
@@ -514,6 +603,12 @@ export default function AdminSubmissionsPage() {
                             {paymentInfo ? (
                               <div className="rounded-full border border-emerald-300/30 bg-emerald-500/15 px-3 py-1 text-xs font-black text-emerald-100">
                                 付款确认
+                              </div>
+                            ) : null}
+
+                            {!item.user_id ? (
+                              <div className="rounded-full border border-yellow-300/30 bg-yellow-500/10 px-3 py-1 text-xs font-black text-yellow-100">
+                                无用户 ID
                               </div>
                             ) : null}
                           </div>
