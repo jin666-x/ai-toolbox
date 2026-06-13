@@ -18,12 +18,8 @@ const navItems = [
     href: "/#steps",
   },
   {
-    label: "套餐价格",
+    label: "价格",
     href: "/pricing",
-  },
-  {
-    label: "申请 Pro",
-    href: "/waitlist",
   },
   {
     label: "会员中心",
@@ -37,7 +33,7 @@ export default function SiteHeader() {
 
   function isActive(href: string) {
     if (href.startsWith("/#")) {
-      return pathname === "/";
+      return false;
     }
 
     return pathname === href;
@@ -74,6 +70,13 @@ export default function SiteHeader() {
             className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10"
           >
             登录
+          </Link>
+
+          <Link
+            href="/waitlist"
+            className="rounded-full border border-purple-300/30 bg-purple-500/20 px-5 py-2 text-sm font-bold text-purple-100 transition hover:bg-purple-500/30"
+          >
+            申请 Pro
           </Link>
 
           <Link
@@ -120,6 +123,14 @@ export default function SiteHeader() {
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
             >
               登录
+            </Link>
+
+            <Link
+              href="/waitlist"
+              onClick={() => setOpen(false)}
+              className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-4 py-3 text-center text-sm font-black text-purple-100 transition hover:bg-purple-500/30"
+            >
+              申请 Pro 会员
             </Link>
 
             <Link
