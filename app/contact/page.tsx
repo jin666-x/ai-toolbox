@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 const contactCards = [
   {
@@ -39,6 +41,34 @@ export default function ContactPage() {
     setStatus("idle");
     setStatusText("");
 
+    if (!email.trim()) {
+      setStatus("error");
+      setStatusText("请填写你的邮箱，方便后续联系。");
+      setLoading(false);
+      return;
+    }
+
+    if (!feedbackType.trim()) {
+      setStatus("error");
+      setStatusText("请选择反馈类型。");
+      setLoading(false);
+      return;
+    }
+
+    if (!message.trim()) {
+      setStatus("error");
+      setStatusText("请填写具体内容。");
+      setLoading(false);
+      return;
+    }
+
+    if (message.length > 1000) {
+      setStatus("error");
+      setStatusText("内容不能超过 1000 字。");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -75,51 +105,10 @@ export default function ContactPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen overflow-hidden bg-black text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.2),transparent_35%)]" />
 
-      <header className="relative mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <Link href="/" className="text-2xl font-black tracking-tight">
-          AI Bot Pro
-        </Link>
-
-        <nav className="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
-          <Link href="/" className="hover:text-white">
-            首页
-          </Link>
-
-          <Link href="/chat" className="hover:text-white">
-            工具箱
-          </Link>
-
-          <Link href="/pricing" className="hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/contact" className="text-white">
-            联系我们
-          </Link>
-
-          <Link href="/login" className="hover:text-white">
-            登录
-          </Link>
-        </nav>
-
-        <Link
-          href="/chat"
-          className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-        >
-          免费体验
-        </Link>
-      </header>
+      <SiteHeader />
 
       <section className="relative mx-auto max-w-7xl px-6 pb-20 pt-16 md:pt-24">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
@@ -138,8 +127,7 @@ export default function ContactPage() {
 
             <p className="mt-8 max-w-2xl text-lg leading-8 text-zinc-400">
               如果你想了解 Pro 套餐、反馈使用问题、咨询合作或提出功能建议，
-              可以通过这个页面提交。当前版本已经可以提交到后端接口，
-              后续可以继续接入邮箱通知、数据库或飞书通知。
+              可以通过这个页面提交。我们收到后会尽快查看，并通过你填写的邮箱联系你。
             </p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -152,9 +140,16 @@ export default function ContactPage() {
 
               <Link
                 href="/waitlist"
+                className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 text-center text-lg font-black text-purple-100 transition hover:bg-purple-500/30"
+              >
+                申请 Pro 会员
+              </Link>
+
+              <Link
+                href="/pricing"
                 className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-white/10"
               >
-                加入等待名单
+                查看套餐
               </Link>
             </div>
           </div>
@@ -164,7 +159,7 @@ export default function ContactPage() {
               <h2 className="text-3xl font-black">提交反馈</h2>
 
               <p className="mt-3 text-sm leading-6 text-zinc-400">
-                填写后会提交到 /api/contact 接口。后续可以继续接邮箱、数据库或通知机器人。
+                填写你的邮箱、反馈类型和具体内容，我们会根据情况尽快处理。
               </p>
             </div>
 
@@ -198,6 +193,7 @@ export default function ContactPage() {
                   <option value="问题反馈">问题反馈</option>
                   <option value="商务合作">商务合作</option>
                   <option value="功能建议">功能建议</option>
+                  <option value="Pro 会员咨询">Pro 会员咨询</option>
                 </select>
               </div>
 
@@ -218,8 +214,8 @@ export default function ContactPage() {
 
                 <textarea
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="请输入你想反馈的内容"
+                  onChange={(e) => setMessage(e.target.value.slice(0, 1000))}
+                  placeholder="请输入你想反馈的内容，比如：想咨询 Pro、生成失败、次数异常、功能建议等。"
                   className={`h-32 w-full resize-none rounded-2xl border bg-black/40 px-5 py-4 text-white outline-none placeholder:text-zinc-600 ${
                     message.length > 1000
                       ? "border-red-500/60"
@@ -248,9 +244,8 @@ export default function ContactPage() {
                 </div>
               )}
 
-              <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm leading-6 text-blue-200">
-                当前提交会记录在服务端日志中。部署到 Vercel 后，可以在 Vercel
-                项目日志里查看提交内容。下一步可以继续接入邮箱通知或数据库保存。
+              <div className="rounded-2xl border border-purple-500/20 bg-purple-500/10 p-4 text-sm leading-6 text-purple-100/80">
+                想开通 Pro 会员，也可以直接前往申请页面提交信息。
               </div>
             </form>
           </div>
@@ -317,43 +312,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <footer className="relative border-t border-white/10 px-6 py-8 text-center text-sm text-zinc-500">
-        <div className="mb-4 flex flex-wrap justify-center gap-5">
-          <Link href="/about" className="transition hover:text-white">
-            关于我们
-          </Link>
-
-          <Link href="/contact" className="transition hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/privacy" className="transition hover:text-white">
-            隐私政策
-          </Link>
-
-          <Link href="/terms" className="transition hover:text-white">
-            服务条款
-          </Link>
-
-          <Link href="/pricing" className="transition hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="transition hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="transition hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/login" className="transition hover:text-white">
-            登录
-          </Link>
-        </div>
-
-        <div>© 2026 AI Bot Pro. All rights reserved.</div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }
