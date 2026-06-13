@@ -1,4 +1,6 @@
 import Link from "next/link";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 const plans = [
   {
@@ -55,7 +57,7 @@ const plans = [
       "适合长期内容生产",
       "适合副业、自媒体、创业者",
       "后续可升级更多权益",
-      "支持后台人工开通",
+      "支持人工开通",
       "适合重度使用用户",
     ],
     button: "咨询年卡方案",
@@ -69,7 +71,7 @@ const plans = [
 const faqs = [
   {
     q: "现在可以直接支付购买吗？",
-    a: "当前支付功能还没有接入。Pro 会员可以先通过等待名单或联系页面提交申请，然后由管理员在后台手动开通。",
+    a: "当前支付功能还没有接入。Pro 会员可以先通过申请页或联系页面提交申请，然后由管理员手动开通。",
   },
   {
     q: "免费版每天可以用几次？",
@@ -87,60 +89,10 @@ const faqs = [
 
 export default function PricingPage() {
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen overflow-hidden bg-black text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.2),transparent_35%)]" />
 
-      <header className="relative mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <Link href="/" className="text-2xl font-black tracking-tight">
-          AI Bot Pro
-        </Link>
-
-        <nav className="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
-          <Link href="/" className="hover:text-white">
-            首页
-          </Link>
-
-          <Link href="/chat" className="hover:text-white">
-            工具箱
-          </Link>
-
-          <Link href="/pricing" className="text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/contact" className="hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/login" className="hover:text-white">
-            登录
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard"
-            className="hidden rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
-          >
-            会员中心
-          </Link>
-
-          <Link
-            href="/chat"
-            className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-          >
-            立即使用
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="relative mx-auto max-w-7xl px-6 pb-20 pt-16 text-center md:pt-24">
         <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/10 px-5 py-2 text-sm text-zinc-300 backdrop-blur-xl">
@@ -156,8 +108,8 @@ export default function PricingPage() {
         </h1>
 
         <p className="mx-auto mt-8 max-w-3xl text-lg leading-8 text-zinc-400">
-          免费版适合体验，Pro 版适合高频创作、文案生成、短视频脚本、广告优化和办公效率提升。
-          当前 Pro 会员支持后台人工开通，支付功能后续接入。
+          免费版适合体验，Pro 版适合高频创作、文案生成、短视频脚本、
+          广告优化和办公效率提升。当前 Pro 会员支持人工开通，支付功能后续接入。
         </p>
 
         <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
@@ -270,7 +222,7 @@ export default function PricingPage() {
 
               <p className="mt-6 leading-8 text-zinc-400">
                 当前系统已经支持登录账号、会员中心、每日使用次数、Free / Pro
-                套餐识别和后台开通会员。支付功能后续接入前，可以先通过等待名单或联系页面提交申请。
+                套餐识别和会员开通。支付功能后续接入前，可以先通过申请页或联系页面提交申请。
               </p>
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -293,12 +245,16 @@ export default function PricingPage() {
             <div className="space-y-4">
               <div className="rounded-3xl border border-white/10 bg-black/30 p-6">
                 <div className="text-3xl font-black">5 次/天</div>
-                <div className="mt-2 text-zinc-400">未登录用户每日体验次数</div>
+                <div className="mt-2 text-zinc-400">
+                  未登录用户每日体验次数
+                </div>
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-black/30 p-6">
                 <div className="text-3xl font-black">10 次/天</div>
-                <div className="mt-2 text-zinc-400">Free 免费账号每日次数</div>
+                <div className="mt-2 text-zinc-400">
+                  Free 免费账号每日次数
+                </div>
               </div>
 
               <div className="rounded-3xl border border-purple-300/20 bg-purple-500/10 p-6">
@@ -335,43 +291,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <footer className="relative border-t border-white/10 px-6 py-8 text-center text-sm text-zinc-500">
-        <div className="mb-4 flex flex-wrap justify-center gap-5">
-          <Link href="/about" className="transition hover:text-white">
-            关于我们
-          </Link>
-
-          <Link href="/contact" className="transition hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/privacy" className="transition hover:text-white">
-            隐私政策
-          </Link>
-
-          <Link href="/terms" className="transition hover:text-white">
-            服务条款
-          </Link>
-
-          <Link href="/pricing" className="transition hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="transition hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="transition hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/login" className="transition hover:text-white">
-            登录
-          </Link>
-        </div>
-
-        <div>© 2026 AI Bot Pro. All rights reserved.</div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }
