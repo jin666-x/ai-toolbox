@@ -290,8 +290,8 @@ export default function DashboardPage() {
               <Link href="/pricing" className="hover:text-white">
                 套餐价格
               </Link>
-              <Link href="/waitlist" className="hover:text-white">
-                申请 Pro
+              <Link href="/checkout" className="hover:text-white">
+                升级 Pro
               </Link>
               <Link href="/contact" className="hover:text-white">
                 联系我们
@@ -312,7 +312,7 @@ export default function DashboardPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              在这里可以查看账号信息、当前套餐、今日 AI 使用次数、剩余次数和 Pro 开通记录。
+              在这里可以查看账号信息、当前套餐、今日 AI 使用次数、剩余次数和 Pro 开通记录，也可以直接升级、续费或提交付款确认。
             </p>
           </div>
         </div>
@@ -368,6 +368,26 @@ export default function DashboardPage() {
                     到期时间：{formatTime(userPlan.expiredAt)}
                   </p>
                 )}
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link
+                    href="/checkout"
+                    className={
+                      userPlan.plan === "pro"
+                        ? "rounded-2xl border border-purple-300/30 bg-purple-500/10 px-5 py-3 text-sm font-black text-purple-100 transition hover:bg-purple-500/20"
+                        : "rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-white/90"
+                    }
+                  >
+                    {userPlan.plan === "pro" ? "续费 Pro" : "升级 Pro"}
+                  </Link>
+
+                  <Link
+                    href="/pricing"
+                    className="rounded-2xl border border-white/10 bg-black/30 px-5 py-3 text-sm font-bold text-white/80 transition hover:border-white/30"
+                  >
+                    查看套餐
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -387,7 +407,7 @@ export default function DashboardPage() {
               </div>
             ) : orders.length === 0 ? (
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/50">
-                暂时没有 Pro 开通记录。开通 Pro 后，这里会显示套餐和到期时间。
+                暂时没有 Pro 开通记录。开通 Pro 后，这里会显示套餐和到期时间。你也可以先去提交付款确认。
               </div>
             ) : (
               <div className="space-y-4">
@@ -513,10 +533,17 @@ export default function DashboardPage() {
               </Link>
 
               <Link
+                href="/checkout"
+                className="rounded-2xl border border-emerald-300/20 bg-emerald-500/10 px-5 py-4 text-center font-black text-emerald-100 transition hover:bg-emerald-500/20"
+              >
+                升级 / 续费 Pro
+              </Link>
+
+              <Link
                 href="/waitlist"
                 className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-center font-bold text-white transition hover:border-white/30"
               >
-                申请 Pro
+                商务定制 / 人工咨询
               </Link>
 
               <button
