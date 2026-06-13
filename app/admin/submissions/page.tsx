@@ -40,6 +40,13 @@ type UpdateStatusResponse = {
   error?: string;
 };
 
+type ApproveProResponse = {
+  success: boolean;
+  message?: string;
+  application?: ProApplication;
+  error?: string;
+};
+
 const statusMap: Record<
   ApplicationStatus,
   {
@@ -81,6 +88,7 @@ export default function AdminSubmissionsPage() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
+  const [approvingId, setApprovingId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -164,6 +172,55 @@ export default function AdminSubmissionsPage() {
       setError(err instanceof Error ? err.message : "更新失败，请稍后再试。");
     } finally {
       setUpdatingId("");
+    }
+  }
+
+  async function approvePro(applicationId: string) {
+    if (approvingId) return;
+
+    setApprovingId(applicationId);
+    setError("");
+    setNotice("");
+
+    try {
+      const res = await fetch("/api/admin/applications/approve-pro", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          applicationId,
+        }),
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("后台接口返回异常，请重新通过 admin_key 进入后台。");
+      }
+
+      const data = (await res.json()) as ApproveProResponse;
+
+      if (!res.ok) {
+        throw new Error(data.error || "一键开通失败");
+      }
+
+      if (data.application) {
+        const updatedApplication = data.application;
+
+        setApplications((prev) =>
+          prev.map((item) =>
+            item.id === updatedApplication.id ? updatedApplication : item
+          )
+        );
+      }
+
+      setNotice(data.message || "已成功一键开通 Pro。");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "一键开通失败，请稍后再试。");
+    } finally {
+      setApprovingId("");
     }
   }
 
@@ -303,6 +360,7 @@ export default function AdminSubmissionsPage() {
                   const currentStatus =
                     statusMap[item.status] || statusMap.pending;
                   const isUpdating = updatingId === item.id;
+                  const isApproving = approvingId === item.id;
 
                   return (
                     <div
@@ -367,6 +425,17 @@ export default function AdminSubmissionsPage() {
                         {item.user_id ? (
                           <button
                             type="button"
+                            disabled={isApproving || item.status === "approved"}
+                            onClick={() => approvePro(item.id)}
+                            className="rounded-full border border-emerald-400/20 bg-emerald-500 px-4 py-2 text-xs font-black text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isApproving ? "开通中..." : "一键开通 Pro"}
+                          </button>
+                        ) : null}
+
+                        {item.user_id ? (
+                          <button
+                            type="button"
                             onClick={() => copyUserId(item.user_id || "")}
                             className="rounded-full border border-white/10 bg-white px-4 py-2 text-xs font-black text-black transition hover:bg-zinc-200"
                           >
@@ -422,6 +491,12 @@ export default function AdminSubmissionsPage() {
                       {isUpdating ? (
                         <div className="mt-3 text-xs text-white/40">
                           正在更新状态...
+                        </div>
+                      ) : null}
+
+                      {isApproving ? (
+                        <div className="mt-3 text-xs text-emerald-300/70">
+                          正在一键开通 Pro...
                         </div>
                       ) : null}
                     </div>
