@@ -16,7 +16,7 @@ type ProOrder = {
   currency: string;
   daily_limit: number;
   expired_at: string | null;
-  status: OrderStatus | string;
+  status: OrderStatus;
   source: string;
   email_sent: boolean;
   created_at: string;
@@ -29,23 +29,40 @@ type OrdersResponse = {
   error?: string;
 };
 
-type ExpireProResponse = {
+type UpdateOrderResponse = {
   success: boolean;
   message?: string;
-  expiredCount?: number;
-  orderStatusUpdated?: boolean;
+  order?: ProOrder;
   error?: string;
 };
 
-type UpdateOrderStatusResponse = {
-  success: boolean;
-  message?: string;
-  error?: string;
-  order?: ProOrder;
+const statusMap: Record<
+  OrderStatus,
+  {
+    label: string;
+    className: string;
+  }
+> = {
+  active: {
+    label: "生效中",
+    className: "border-emerald-400/20 bg-emerald-400/10 text-emerald-200",
+  },
+  expired: {
+    label: "已过期",
+    className: "border-yellow-400/20 bg-yellow-400/10 text-yellow-200",
+  },
+  refunded: {
+    label: "已退款",
+    className: "border-red-400/20 bg-red-400/10 text-red-200",
+  },
+  cancelled: {
+    label: "已停用",
+    className: "border-zinc-400/20 bg-zinc-400/10 text-zinc-200",
+  },
 };
 
 function formatTime(value: string | null) {
-  if (!value) return "未设置";
+  if (!value) return "长期有效 / 未设置";
 
   try {
     return new Date(value).toLocaleString("zh-CN", {
@@ -57,63 +74,28 @@ function formatTime(value: string | null) {
   }
 }
 
-function formatAmount(amountCents: number, currency: string) {
-  const amount = amountCents / 100;
-
-  if (amountCents <= 0) {
-    return "￥0 / 试用或手动开通";
-  }
+function formatMoney(cents: number, currency = "CNY") {
+  const amount = (Number(cents) || 0) / 100;
 
   if (currency === "CNY") {
-    return `￥${amount.toFixed(2)}`;
+    return `¥${amount.toFixed(2)}`;
   }
 
-  return `${amount.toFixed(2)} ${currency}`;
-}
-
-function getStatusText(status: string) {
-  if (status === "active") return "有效中";
-  if (status === "expired") return "已过期";
-  if (status === "refunded") return "已退款";
-  if (status === "cancelled") return "已停用";
-  return status;
-}
-
-function getStatusClass(status: string) {
-  if (status === "active") {
-    return "rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-200";
-  }
-
-  if (status === "expired") {
-    return "rounded-full border border-yellow-400/20 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-200";
-  }
-
-  if (status === "refunded") {
-    return "rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-200";
-  }
-
-  if (status === "cancelled") {
-    return "rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-xs font-bold text-red-200";
-  }
-
-  return "rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/60";
+  return `${currency} ${amount.toFixed(2)}`;
 }
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<ProOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expireLoading, setExpireLoading] = useState(false);
-  const [statusLoadingId, setStatusLoadingId] = useState("");
+  const [updatingId, setUpdatingId] = useState("");
+  const [checkingExpired, setCheckingExpired] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  async function loadOrders(options?: { clearMessage?: boolean }) {
+  async function loadOrders() {
     setLoading(true);
-
-    if (options?.clearMessage !== false) {
-      setError("");
-      setNotice("");
-    }
+    setError("");
+    setNotice("");
 
     try {
       const res = await fetch("/api/admin/orders", {
@@ -130,21 +112,77 @@ export default function AdminOrdersPage() {
       const data = (await res.json()) as OrdersResponse;
 
       if (!res.ok) {
-        throw new Error(data.error || "读取失败");
+        throw new Error(data.error || "读取开通记录失败");
       }
 
       setOrders(data.orders || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "读取失败，请稍后再试。");
+      setError(
+        err instanceof Error ? err.message : "读取开通记录失败，请稍后再试。"
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  async function checkExpiredPro() {
-    if (expireLoading) return;
+  async function updateOrderStatus(orderId: string, status: OrderStatus) {
+    if (updatingId) return;
 
-    setExpireLoading(true);
+    const confirmed = window.confirm(
+      status === "active"
+        ? "确定要恢复这个用户的 Pro 吗？"
+        : "确定要更新订单状态吗？如果改成停用/退款/过期，用户会同步降级为 Free。"
+    );
+
+    if (!confirmed) return;
+
+    setUpdatingId(orderId);
+    setError("");
+    setNotice("");
+
+    try {
+      const res = await fetch("/api/admin/orders/status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          orderId,
+          status,
+        }),
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("后台接口返回异常，请重新通过 admin_key 进入后台。");
+      }
+
+      const data = (await res.json()) as UpdateOrderResponse;
+
+      if (!res.ok) {
+        throw new Error(data.error || "更新订单失败");
+      }
+
+      if (data.order) {
+        setOrders((prev) =>
+          prev.map((item) => (item.id === data.order?.id ? data.order : item))
+        );
+      }
+
+      setNotice(data.message || "订单状态已更新。");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "更新失败，请稍后再试。");
+    } finally {
+      setUpdatingId("");
+    }
+  }
+
+  async function checkExpiredPro() {
+    if (checkingExpired) return;
+
+    setCheckingExpired(true);
     setError("");
     setNotice("");
 
@@ -160,119 +198,29 @@ export default function AdminOrdersPage() {
         throw new Error("后台接口返回异常，请重新通过 admin_key 进入后台。");
       }
 
-      const data = (await res.json()) as ExpireProResponse;
+      const data = (await res.json()) as {
+        success?: boolean;
+        message?: string;
+        expiredCount?: number;
+        error?: string;
+      };
 
       if (!res.ok) {
-        throw new Error(data.error || "检查失败");
+        throw new Error(data.error || "检查过期 Pro 失败");
       }
 
-      const successMessage = data.message || "检查完成。";
+      setNotice(
+        data.message ||
+          `检查完成，本次处理 ${data.expiredCount || 0} 个过期 Pro。`
+      );
 
-      setNotice(successMessage);
-      alert(successMessage);
-
-      await loadOrders({
-        clearMessage: false,
-      });
-
-      setNotice(successMessage);
+      await loadOrders();
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "检查失败，请稍后再试。";
-
-      setError(errorMessage);
-      alert(errorMessage);
+      setError(
+        err instanceof Error ? err.message : "检查过期 Pro 失败，请稍后再试。"
+      );
     } finally {
-      setExpireLoading(false);
-    }
-  }
-
-  async function updateOrderStatus(order: ProOrder, status: OrderStatus) {
-    if (statusLoadingId) return;
-
-    let confirmText = "";
-
-    if (status === "active") {
-      confirmText =
-        "确定要恢复这个用户的 Pro 吗？系统会把该用户套餐同步改成 Pro。";
-    }
-
-    if (status === "cancelled") {
-      confirmText =
-        "确定要停用这个用户的 Pro 吗？系统会把该用户套餐同步降级为 Free。";
-    }
-
-    if (status === "refunded") {
-      confirmText =
-        "确定要标记为已退款吗？系统会把该用户套餐同步降级为 Free。";
-    }
-
-    if (status === "expired") {
-      confirmText =
-        "确定要标记为已过期吗？系统会把该用户套餐同步降级为 Free。";
-    }
-
-    const confirmed = window.confirm(confirmText);
-
-    if (!confirmed) return;
-
-    setStatusLoadingId(order.id);
-    setError("");
-    setNotice("");
-
-    try {
-      const res = await fetch("/api/admin/orders/status", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          orderId: order.id,
-          status,
-        }),
-      });
-
-      const contentType = res.headers.get("content-type") || "";
-
-      if (!contentType.includes("application/json")) {
-        throw new Error("后台接口返回异常，请重新通过 admin_key 进入后台。");
-      }
-
-      const data = (await res.json()) as UpdateOrderStatusResponse;
-
-      if (!res.ok) {
-        throw new Error(data.error || "更新失败");
-      }
-
-      const successMessage = data.message || "订单状态已更新。";
-
-      setNotice(successMessage);
-      alert(successMessage);
-
-      await loadOrders({
-        clearMessage: false,
-      });
-
-      setNotice(successMessage);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "更新失败，请稍后再试。";
-
-      setError(errorMessage);
-      alert(errorMessage);
-    } finally {
-      setStatusLoadingId("");
-    }
-  }
-
-  async function copyText(text: string, label: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setNotice(`${label}已复制。`);
-      setError("");
-    } catch {
-      setError("复制失败，请手动选中文本复制。");
+      setCheckingExpired(false);
     }
   }
 
@@ -293,7 +241,7 @@ export default function AdminOrdersPage() {
   return (
     <main className="min-h-screen bg-[#050505] text-white">
       <section className="relative overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.28),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(99,102,241,0.25),transparent_35%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.26),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.22),transparent_35%)]" />
 
         <div className="relative mx-auto max-w-7xl px-6 py-8 md:px-8 lg:px-10">
           <nav className="flex flex-wrap items-center justify-between gap-4">
@@ -302,6 +250,10 @@ export default function AdminOrdersPage() {
             </Link>
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
+              <Link href="/admin" className="hover:text-white">
+                后台首页
+              </Link>
+
               <Link href="/admin/plans" className="hover:text-white">
                 套餐管理
               </Link>
@@ -312,14 +264,6 @@ export default function AdminOrdersPage() {
 
               <Link href="/admin/orders" className="text-white">
                 开通记录
-              </Link>
-
-              <Link href="/dashboard" className="hover:text-white">
-                会员中心
-              </Link>
-
-              <Link href="/chat" className="hover:text-white">
-                AI 工具
               </Link>
 
               <button
@@ -333,25 +277,25 @@ export default function AdminOrdersPage() {
           </nav>
 
           <div className="py-14">
-            <div className="mb-5 inline-flex rounded-full border border-emerald-300/20 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-100">
-              Pro 开通记录
+            <div className="mb-5 inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
+              管理后台
             </div>
 
             <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-tight md:text-6xl">
               开通记录
               <span className="block bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
-                查看所有 Pro 订单和开通历史
+                查看 Pro 订单和会员状态
               </span>
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              这里可以查看 Pro 开通记录，也可以手动停用、恢复、标记退款或检查过期 Pro。
+              这里会显示后台一键开通 Pro 后生成的记录。你可以停用、退款、恢复 Pro，也可以手动检查过期会员。
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => loadOrders()}
+                onClick={loadOrders}
                 disabled={loading}
                 className="rounded-2xl bg-white px-6 py-3 font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -361,17 +305,17 @@ export default function AdminOrdersPage() {
               <button
                 type="button"
                 onClick={checkExpiredPro}
-                disabled={expireLoading}
+                disabled={checkingExpired}
                 className="rounded-2xl border border-yellow-300/20 bg-yellow-500/10 px-6 py-3 font-black text-yellow-100 transition hover:bg-yellow-500/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {expireLoading ? "检查中..." : "手动检查过期 Pro"}
+                {checkingExpired ? "检查中..." : "手动检查过期 Pro"}
               </button>
 
               <Link
                 href="/admin/submissions"
-                className="rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-black text-white transition hover:bg-white/10"
+                className="rounded-2xl border border-purple-300/20 bg-purple-500/10 px-6 py-3 font-black text-purple-100 transition hover:bg-purple-500/20"
               >
-                去看申请
+                去审核申请
               </Link>
             </div>
           </div>
@@ -402,154 +346,129 @@ export default function AdminOrdersPage() {
 
           {loading ? (
             <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/60">
-              正在读取开通记录...
+              正在读取 Pro 开通记录...
             </div>
           ) : orders.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/60">
-              暂时没有 Pro 开通记录。
+              暂时没有 Pro 开通记录。你需要先去「提交记录」里点一键开通 Pro。
             </div>
           ) : (
             <div className="space-y-4">
-              {orders.map((order) => (
-                <div
-                  key={order.id}
-                  className="rounded-3xl border border-white/10 bg-black/30 p-5"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <div className="text-xl font-black">
-                        {order.name || "未填写称呼"}
+              {orders.map((item) => {
+                const currentStatus = statusMap[item.status] || statusMap.active;
+                const isUpdating = updatingId === item.id;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="rounded-3xl border border-white/10 bg-black/30 p-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-xl font-black">
+                          {item.name || item.email}
+                        </div>
+                        <div className="mt-1 text-sm text-white/50">
+                          {item.email}
+                        </div>
                       </div>
 
-                      <div className="mt-1 text-sm text-white/50">
-                        {order.email}
+                      <div
+                        className={`rounded-full border px-3 py-1 text-xs font-bold ${currentStatus.className}`}
+                      >
+                        {currentStatus.label}
                       </div>
                     </div>
 
-                    <div className={getStatusClass(order.status)}>
-                      {getStatusText(order.status)}
-                    </div>
-                  </div>
+                    <div className="mt-4 grid gap-3 text-sm text-white/70 md:grid-cols-2">
+                      <div>
+                        <span className="text-white/40">套餐：</span>
+                        {item.plan_name}
+                      </div>
 
-                  <div className="mt-5 grid gap-3 text-sm text-white/70 md:grid-cols-2">
-                    <div>
-                      <span className="text-white/40">套餐：</span>
-                      {order.plan_name}
-                    </div>
+                      <div>
+                        <span className="text-white/40">金额：</span>
+                        {formatMoney(item.amount_cents, item.currency)}
+                      </div>
 
-                    <div>
-                      <span className="text-white/40">金额：</span>
-                      {formatAmount(order.amount_cents, order.currency)}
-                    </div>
+                      <div>
+                        <span className="text-white/40">每日额度：</span>
+                        {item.daily_limit} 次
+                      </div>
 
-                    <div>
-                      <span className="text-white/40">每日额度：</span>
-                      {order.daily_limit} 次
-                    </div>
+                      <div>
+                        <span className="text-white/40">到期时间：</span>
+                        {formatTime(item.expired_at)}
+                      </div>
 
-                    <div>
-                      <span className="text-white/40">邮件通知：</span>
-                      {order.email_sent ? (
-                        <span className="text-emerald-200">已发送</span>
-                      ) : (
-                        <span className="text-yellow-200">未发送</span>
-                      )}
-                    </div>
+                      <div>
+                        <span className="text-white/40">开通时间：</span>
+                        {formatTime(item.created_at)}
+                      </div>
 
-                    <div>
-                      <span className="text-white/40">开通时间：</span>
-                      {formatTime(order.created_at)}
-                    </div>
+                      <div>
+                        <span className="text-white/40">邮件通知：</span>
+                        {item.email_sent ? "已发送" : "未发送"}
+                      </div>
 
-                    <div>
-                      <span className="text-white/40">到期时间：</span>
-                      {formatTime(order.expired_at)}
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <span className="text-white/40">用户 ID：</span>
-                      {order.user_id ? (
-                        <span className="break-all text-emerald-200">
-                          {order.user_id}
-                        </span>
-                      ) : (
-                        <span className="text-yellow-200">未记录</span>
-                      )}
+                      <div className="md:col-span-2">
+                        <span className="text-white/40">用户 ID：</span>
+                        {item.user_id ? (
+                          <span className="break-all text-emerald-200">
+                            {item.user_id}
+                          </span>
+                        ) : (
+                          <span className="text-yellow-200">未记录</span>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="md:col-span-2">
-                      <span className="text-white/40">申请 ID：</span>
-                      {order.application_id ? (
-                        <span className="break-all text-white/60">
-                          {order.application_id}
-                        </span>
-                      ) : (
-                        <span className="text-yellow-200">未关联申请</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {order.user_id ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
                       <button
                         type="button"
-                        onClick={() => copyText(order.user_id || "", "用户 ID")}
-                        className="rounded-full border border-white/10 bg-white px-4 py-2 text-xs font-black text-black transition hover:bg-zinc-200"
+                        disabled={isUpdating || item.status === "active"}
+                        onClick={() => updateOrderStatus(item.id, "active")}
+                        className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        复制用户 ID
+                        恢复 Pro
                       </button>
+
+                      <button
+                        type="button"
+                        disabled={isUpdating || item.status === "cancelled"}
+                        onClick={() => updateOrderStatus(item.id, "cancelled")}
+                        className="rounded-full border border-zinc-400/20 bg-zinc-500/10 px-4 py-2 text-xs font-bold text-zinc-200 transition hover:bg-zinc-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        停用 Pro
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isUpdating || item.status === "refunded"}
+                        onClick={() => updateOrderStatus(item.id, "refunded")}
+                        className="rounded-full border border-red-400/20 bg-red-500/10 px-4 py-2 text-xs font-bold text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        标记退款
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isUpdating || item.status === "expired"}
+                        onClick={() => updateOrderStatus(item.id, "expired")}
+                        className="rounded-full border border-yellow-400/20 bg-yellow-500/10 px-4 py-2 text-xs font-bold text-yellow-200 transition hover:bg-yellow-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        标记过期
+                      </button>
+                    </div>
+
+                    {isUpdating ? (
+                      <div className="mt-3 text-xs text-white/40">
+                        正在更新订单状态...
+                      </div>
                     ) : null}
-
-                    <button
-                      type="button"
-                      onClick={() => copyText(order.email, "邮箱")}
-                      className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white/70 transition hover:bg-white/10"
-                    >
-                      复制邮箱
-                    </button>
-
-                    {order.status === "active" ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={statusLoadingId === order.id}
-                          onClick={() => updateOrderStatus(order, "cancelled")}
-                          className="rounded-full border border-red-400/20 bg-red-500/10 px-4 py-2 text-xs font-bold text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {statusLoadingId === order.id ? "处理中..." : "停用 Pro"}
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={statusLoadingId === order.id}
-                          onClick={() => updateOrderStatus(order, "refunded")}
-                          className="rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold text-blue-200 transition hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          标记退款
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={statusLoadingId === order.id}
-                          onClick={() => updateOrderStatus(order, "expired")}
-                          className="rounded-full border border-yellow-400/20 bg-yellow-500/10 px-4 py-2 text-xs font-bold text-yellow-200 transition hover:bg-yellow-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          标记过期
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={statusLoadingId === order.id}
-                        onClick={() => updateOrderStatus(order, "active")}
-                        className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {statusLoadingId === order.id ? "处理中..." : "恢复 Pro"}
-                      </button>
-                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
