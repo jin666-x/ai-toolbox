@@ -219,7 +219,7 @@ export default function AdminSubmissionsPage() {
     if (approvingId) return;
 
     const confirmed = window.confirm(
-      "确定要为这个用户一键开通 Pro 吗？系统会同步写入会员套餐、开通记录，并发送邮件通知。"
+      "确定要开通 Pro 吗？如果这条申请没有用户 ID，系统会尝试按邮箱匹配已注册账号。"
     );
 
     if (!confirmed) return;
@@ -262,7 +262,7 @@ export default function AdminSubmissionsPage() {
         );
       }
 
-      setNotice(data.message || "已成功一键开通 Pro。");
+      setNotice(data.message || "已成功开通 Pro。");
     } catch (err) {
       setError(err instanceof Error ? err.message : "一键开通失败，请稍后再试。");
     } finally {
@@ -359,7 +359,7 @@ export default function AdminSubmissionsPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              这里会显示用户提交的 Pro 会员申请和联系反馈，支持一键开通、标记状态和复制用户 ID。
+              这里会显示用户提交的 Pro 会员申请和联系反馈，支持一键开通、按邮箱开通、标记状态和复制用户 ID。
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -494,7 +494,7 @@ export default function AdminSubmissionsPage() {
                             </span>
                           ) : (
                             <span className="text-yellow-200">
-                              未记录，可能是旧申请或用户未登录
+                              未记录，系统会尝试按邮箱匹配已注册账号
                             </span>
                           )}
                         </div>
@@ -505,20 +505,20 @@ export default function AdminSubmissionsPage() {
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {item.user_id ? (
-                          <button
-                            type="button"
-                            disabled={isApproving || item.status === "approved"}
-                            onClick={() => approvePro(item.id)}
-                            className="rounded-full border border-emerald-300/30 bg-emerald-400 px-5 py-2 text-xs font-black text-black shadow-lg shadow-emerald-500/10 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {isApproving
-                              ? "开通中..."
-                              : item.status === "approved"
-                              ? "已开通"
-                              : "一键开通 Pro"}
-                          </button>
-                        ) : null}
+                        <button
+                          type="button"
+                          disabled={isApproving || item.status === "approved"}
+                          onClick={() => approvePro(item.id)}
+                          className="rounded-full border border-emerald-300/30 bg-emerald-400 px-5 py-2 text-xs font-black text-black shadow-lg shadow-emerald-500/10 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isApproving
+                            ? "开通中..."
+                            : item.status === "approved"
+                            ? "已开通"
+                            : item.user_id
+                            ? "一键开通 Pro"
+                            : "按邮箱开通 Pro"}
+                        </button>
 
                         {item.user_id ? (
                           <button
@@ -591,7 +591,7 @@ export default function AdminSubmissionsPage() {
 
                       {isApproving ? (
                         <div className="mt-3 text-xs text-emerald-300/70">
-                          正在一键开通 Pro...
+                          正在开通 Pro...
                         </div>
                       ) : null}
                     </div>

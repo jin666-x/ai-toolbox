@@ -190,11 +190,43 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!application.user_id) {
+    let targetUserId = application.user_id;
+    let matchedByEmail = false;
+
+    if (!targetUserId) {
+      const normalizedEmail = application.email.trim().toLowerCase();
+
+      const { data: usersData, error: usersError } =
+        await supabase.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000,
+        });
+
+      if (usersError) {
+        console.error("按邮箱查找用户失败：", usersError);
+
+        return Response.json(
+          {
+            error:
+              "这条申请没有用户 ID，系统按邮箱查找用户失败，请检查 Supabase 服务端配置。",
+          },
+          { status: 500 }
+        );
+      }
+
+      const matchedUser = usersData.users.find(
+        (user) => user.email?.trim().toLowerCase() === normalizedEmail
+      );
+
+      targetUserId = matchedUser?.id || null;
+      matchedByEmail = Boolean(targetUserId);
+    }
+
+    if (!targetUserId) {
       return Response.json(
         {
           error:
-            "这条申请没有用户 ID，可能是旧申请或用户未登录提交，无法一键开通。",
+            "这条申请没有用户 ID，并且申请邮箱没有匹配到已注册账号。请让用户先注册/登录一次，再重新提交申请。",
         },
         { status: 400 }
       );
@@ -206,7 +238,7 @@ export async function POST(req: Request) {
 
     const { error: planError } = await supabase.from("user_plans").upsert(
       {
-        user_id: application.user_id,
+        user_id: targetUserId,
         plan: "pro",
         daily_limit: dailyLimit,
         expired_at: expiredAt,
@@ -230,6 +262,7 @@ export async function POST(req: Request) {
       .from("pro_applications")
       .update({
         status: "approved",
+        user_id: targetUserId,
         updated_at: new Date().toISOString(),
       })
       .eq("id", applicationId)
@@ -268,7 +301,7 @@ export async function POST(req: Request) {
 
     const orderPayload = {
       application_id: application.id,
-      user_id: application.user_id,
+      user_id: targetUserId,
       email: application.email,
       name: application.name || null,
       plan_name: application.plan,
@@ -277,7 +310,7 @@ export async function POST(req: Request) {
       daily_limit: dailyLimit,
       expired_at: expiredAt,
       status: "active",
-      source: "manual_admin",
+      source: matchedByEmail ? "manual_admin_email_match" : "manual_admin",
       email_sent: emailResult.sent,
       updated_at: new Date().toISOString(),
     };
@@ -300,8 +333,9 @@ export async function POST(req: Request) {
         application: updatedApplication,
         emailSent: emailResult.sent,
         orderSaved: false,
+        matchedByEmail,
         plan: {
-          userId: application.user_id,
+          userId: targetUserId,
           plan: "pro",
           dailyLimit,
           expiredAt,
@@ -312,14 +346,19 @@ export async function POST(req: Request) {
 
     return Response.json({
       success: true,
-      message: emailResult.sent
+      message: matchedByEmail
+        ? emailResult.sent
+          ? "已按邮箱匹配到注册账号，并成功开通 Pro，已写入开通记录和发送邮件。"
+          : "已按邮箱匹配到注册账号，并成功开通 Pro，已写入开通记录，但邮件通知未发送，请检查 Resend 配置。"
+        : emailResult.sent
         ? "已成功一键开通 Pro，已写入开通记录，并已发送邮件通知用户。"
         : "已成功一键开通 Pro，已写入开通记录，但邮件通知未发送，请检查 Resend 配置。",
       application: updatedApplication,
       emailSent: emailResult.sent,
       orderSaved: true,
+      matchedByEmail,
       plan: {
-        userId: application.user_id,
+        userId: targetUserId,
         plan: "pro",
         dailyLimit,
         expiredAt,
