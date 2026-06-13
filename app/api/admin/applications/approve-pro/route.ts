@@ -15,6 +15,8 @@ type ProApplication = {
   updated_at: string;
 };
 
+const SITE_URL = "https://aibotpro.top";
+
 function getExpiredAt(planText: string) {
   const now = new Date();
 
@@ -92,74 +94,97 @@ async function sendProApprovedEmail(params: {
     };
   }
 
-  const resend = new Resend(resendApiKey);
+  try {
+    const resend = new Resend(resendApiKey);
 
-  const safeName = escapeHtml(params.name || "用户");
-  const safePlan = escapeHtml(params.plan);
-  const safeDailyLimit = escapeHtml(String(params.dailyLimit));
-  const safeExpiredAt = escapeHtml(formatExpiredAt(params.expiredAt));
+    const safeName = escapeHtml(params.name || "用户");
+    const safePlan = escapeHtml(params.plan);
+    const safeDailyLimit = escapeHtml(String(params.dailyLimit));
+    const safeExpiredAt = escapeHtml(formatExpiredAt(params.expiredAt));
 
-  const { error } = await resend.emails.send({
-    from: fromEmail,
-    to: [params.email],
-    subject: "你的 AI Bot Pro Pro 会员已开通",
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #111; max-width: 680px;">
-        <h2 style="margin-bottom: 16px;">AI Bot Pro Pro 会员已开通</h2>
+    const { error } = await resend.emails.send({
+      from: fromEmail,
+      to: [params.email],
+      subject: "你的 AI Bot Pro 会员已开通",
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.75; color: #111827; max-width: 680px; margin: 0 auto;">
+          <div style="padding: 28px; border-radius: 20px; background: #0b0b0f; color: #fff;">
+            <div style="display: inline-block; padding: 8px 12px; border-radius: 999px; background: rgba(16,185,129,.16); color: #a7f3d0; font-size: 13px; font-weight: 700;">
+              Pro 已开通
+            </div>
 
-        <p>${safeName}，你好：</p>
+            <h1 style="margin: 18px 0 8px; font-size: 28px; line-height: 1.25;">
+              AI Bot Pro 会员已开通
+            </h1>
 
-        <p>
-          你的 AI Bot Pro Pro 会员已经开通成功，现在可以登录账号使用 Pro 权限。
-        </p>
+            <p style="margin: 0; color: #cbd5e1;">
+              ${safeName}，你好，你的 Pro 权限已经开通成功。
+            </p>
+          </div>
 
-        <div style="padding: 16px; background: #f7f7f7; border-radius: 12px; margin: 20px 0;">
-          <p><strong>开通套餐：</strong>${safePlan}</p>
-          <p><strong>每日额度：</strong>${safeDailyLimit} 次</p>
-          <p><strong>到期时间：</strong>${safeExpiredAt}</p>
+          <div style="padding: 22px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 18px; margin: 20px 0;">
+            <p style="margin: 0 0 10px;"><strong>开通套餐：</strong>${safePlan}</p>
+            <p style="margin: 0 0 10px;"><strong>每日额度：</strong>${safeDailyLimit} 次</p>
+            <p style="margin: 0;"><strong>到期时间：</strong>${safeExpiredAt}</p>
+          </div>
+
+          <p>
+            你现在可以登录 AI Bot Pro 使用 Pro 权限，并在会员中心查看套餐状态、今日剩余次数和开通记录。
+          </p>
+
+          <div style="margin: 24px 0;">
+            <a href="${SITE_URL}/dashboard" style="display: inline-block; padding: 12px 18px; border-radius: 12px; background: #111827; color: #fff; text-decoration: none; font-weight: 700;">
+              查看会员中心
+            </a>
+
+            <a href="${SITE_URL}/chat" style="display: inline-block; padding: 12px 18px; border-radius: 12px; background: #ecfdf5; color: #047857; text-decoration: none; font-weight: 700; margin-left: 8px;">
+              使用 AI 工具
+            </a>
+          </div>
+
+          <p style="margin-top: 24px; color: #6b7280; font-size: 13px;">
+            这封邮件由 AI Bot Pro 系统自动发送。
+          </p>
         </div>
-
-        <p>
-          你可以登录会员中心查看当前套餐状态和每日剩余次数。
-        </p>
-
-        <p>
-          会员中心：<a href="https://aibotpro.top/dashboard">https://aibotpro.top/dashboard</a>
-        </p>
-
-        <p style="margin-top: 24px; color: #666; font-size: 13px;">
-          这封邮件由 AI Bot Pro 系统自动发送。
-        </p>
-      </div>
-    `,
-    text: `
-AI Bot Pro Pro 会员已开通
+      `,
+      text: `AI Bot Pro 会员已开通
 
 ${params.name || "用户"}，你好：
 
-你的 AI Bot Pro Pro 会员已经开通成功。
+你的 AI Bot Pro Pro 权限已经开通成功。
 
 开通套餐：${params.plan}
 每日额度：${params.dailyLimit} 次
 到期时间：${formatExpiredAt(params.expiredAt)}
 
-你可以登录会员中心查看当前套餐状态和每日剩余次数：
-https://aibotpro.top/dashboard
-    `,
-  });
+会员中心：
+${SITE_URL}/dashboard
 
-  if (error) {
-    console.error("Pro 开通通知邮件发送失败：", error);
+AI 工具：
+${SITE_URL}/chat
+`,
+    });
+
+    if (error) {
+      console.error("Pro 开通通知邮件发送失败：", error);
+
+      return {
+        sent: false,
+        reason: "Resend 发送失败",
+      };
+    }
+
+    return {
+      sent: true,
+    };
+  } catch (error) {
+    console.error("Pro 开通通知邮件异常：", error);
 
     return {
       sent: false,
-      reason: "Resend 发送失败",
+      reason: "邮件发送异常",
     };
   }
-
-  return {
-    sent: true,
-  };
 }
 
 export async function POST(req: Request) {
@@ -179,7 +204,7 @@ export async function POST(req: Request) {
         "id, user_id, name, email, company, plan, use_case, message, status, created_at, updated_at"
       )
       .eq("id", applicationId)
-      .single<ProApplication>();
+      .single();
 
     if (applicationError || !application) {
       console.error("读取 Pro 申请失败：", applicationError);
@@ -190,11 +215,13 @@ export async function POST(req: Request) {
       );
     }
 
-    let targetUserId = application.user_id;
+    const typedApplication = application as ProApplication;
+
+    let targetUserId = typedApplication.user_id;
     let matchedByEmail = false;
 
     if (!targetUserId) {
-      const normalizedEmail = application.email.trim().toLowerCase();
+      const normalizedEmail = typedApplication.email.trim().toLowerCase();
 
       const { data: usersData, error: usersError } =
         await supabase.auth.admin.listUsers({
@@ -232,9 +259,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const expiredAt = getExpiredAt(application.plan);
-    const amountCents = getAmountCents(application.plan);
+    const expiredAt = getExpiredAt(typedApplication.plan);
+    const amountCents = getAmountCents(typedApplication.plan);
     const dailyLimit = 100;
+    const now = new Date().toISOString();
 
     const { error: planError } = await supabase.from("user_plans").upsert(
       {
@@ -242,7 +270,7 @@ export async function POST(req: Request) {
         plan: "pro",
         daily_limit: dailyLimit,
         expired_at: expiredAt,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       },
       {
         onConflict: "user_id",
@@ -263,13 +291,13 @@ export async function POST(req: Request) {
       .update({
         status: "approved",
         user_id: targetUserId,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       })
       .eq("id", applicationId)
       .select(
         "id, user_id, name, email, company, plan, use_case, message, status, created_at, updated_at"
       )
-      .single<ProApplication>();
+      .single();
 
     if (updateError || !updatedApplication) {
       console.error("更新申请状态失败：", updateError);
@@ -284,9 +312,9 @@ export async function POST(req: Request) {
     }
 
     const emailResult = await sendProApprovedEmail({
-      email: application.email,
-      name: application.name,
-      plan: application.plan,
+      email: typedApplication.email,
+      name: typedApplication.name,
+      plan: typedApplication.plan,
       dailyLimit,
       expiredAt,
     });
@@ -294,17 +322,17 @@ export async function POST(req: Request) {
     const { data: existingOrders } = await supabase
       .from("pro_orders")
       .select("id")
-      .eq("application_id", application.id)
+      .eq("application_id", typedApplication.id)
       .limit(1);
 
     const existingOrderId = existingOrders?.[0]?.id;
 
     const orderPayload = {
-      application_id: application.id,
+      application_id: typedApplication.id,
       user_id: targetUserId,
-      email: application.email,
-      name: application.name || null,
-      plan_name: application.plan,
+      email: typedApplication.email,
+      name: typedApplication.name || null,
+      plan_name: typedApplication.plan,
       amount_cents: amountCents,
       currency: "CNY",
       daily_limit: dailyLimit,
@@ -312,7 +340,7 @@ export async function POST(req: Request) {
       status: "active",
       source: matchedByEmail ? "manual_admin_email_match" : "manual_admin",
       email_sent: emailResult.sent,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     };
 
     const { error: orderError } = existingOrderId
@@ -329,7 +357,7 @@ export async function POST(req: Request) {
         success: true,
         message: emailResult.sent
           ? "Pro 已开通，邮件已发送，但开通记录写入失败，请检查 pro_orders 表。"
-          : "Pro 已开通，但邮件未发送，开通记录也写入失败，请检查 Resend 和 pro_orders 表。",
+          : "Pro 已开通，但邮件未发送，开通记录写入失败，请检查 Resend 和 pro_orders 表。",
         application: updatedApplication,
         emailSent: emailResult.sent,
         orderSaved: false,
