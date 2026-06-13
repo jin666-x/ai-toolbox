@@ -1,4 +1,6 @@
 import Link from "next/link";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 const values = [
   {
@@ -17,51 +19,10 @@ const values = [
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen overflow-hidden bg-black text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.2),transparent_35%)]" />
 
-      <header className="relative mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <Link href="/" className="text-2xl font-black tracking-tight">
-          AI Bot Pro
-        </Link>
-
-        <nav className="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
-          <Link href="/" className="hover:text-white">
-            首页
-          </Link>
-
-          <Link href="/chat" className="hover:text-white">
-            工具箱
-          </Link>
-
-          <Link href="/pricing" className="hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/contact" className="hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/login" className="hover:text-white">
-            登录
-          </Link>
-        </nav>
-
-        <Link
-          href="/chat"
-          className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-        >
-          免费体验
-        </Link>
-      </header>
+      <SiteHeader />
 
       <section className="relative mx-auto max-w-7xl px-6 pb-20 pt-16 text-center md:pt-24">
         <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/10 px-5 py-2 text-sm text-zinc-300 backdrop-blur-xl">
@@ -91,17 +52,17 @@ export default function AboutPage() {
           </Link>
 
           <Link
-            href="/contact"
-            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
-          >
-            联系我们
-          </Link>
-
-          <Link
             href="/pricing"
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
           >
             查看套餐价格
+          </Link>
+
+          <Link
+            href="/waitlist"
+            className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 text-lg font-black text-purple-100 transition hover:bg-purple-500/30"
+          >
+            申请 Pro 会员
           </Link>
         </div>
       </section>
@@ -151,9 +112,9 @@ export default function AboutPage() {
                 <div className="mt-2 text-zinc-400">不会提示词也能使用</div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-black/30 p-6">
-                <div className="text-3xl font-black">Pro</div>
-                <div className="mt-2 text-zinc-400">
+              <div className="rounded-3xl border border-purple-300/20 bg-purple-500/10 p-6">
+                <div className="text-3xl font-black text-purple-100">Pro</div>
+                <div className="mt-2 text-purple-100/70">
                   后续开放更多会员权益和高级功能
                 </div>
               </div>
@@ -183,9 +144,9 @@ export default function AboutPage() {
 
             <Link
               href="/waitlist"
-              className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
+              className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 font-black text-purple-100 transition hover:bg-purple-500/30"
             >
-              加入等待名单
+              申请 Pro 会员
             </Link>
 
             <Link
@@ -198,43 +159,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <footer className="relative border-t border-white/10 px-6 py-8 text-center text-sm text-zinc-500">
-        <div className="mb-4 flex flex-wrap justify-center gap-5">
-          <Link href="/about" className="transition hover:text-white">
-            关于我们
-          </Link>
-
-          <Link href="/contact" className="transition hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/privacy" className="transition hover:text-white">
-            隐私政策
-          </Link>
-
-          <Link href="/terms" className="transition hover:text-white">
-            服务条款
-          </Link>
-
-          <Link href="/pricing" className="transition hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="transition hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="transition hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/login" className="transition hover:text-white">
-            登录
-          </Link>
-        </div>
-
-        <div>© 2026 AI Bot Pro. All rights reserved.</div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }
