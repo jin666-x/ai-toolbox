@@ -123,6 +123,51 @@ function getPlanTag(plan: string) {
   };
 }
 
+function parsePaymentMessage(message: string | null, useCase: string) {
+  const raw = message || "";
+  const isPayment =
+    raw.includes("【付款确认】") || useCase.includes("付款确认");
+
+  if (!isPayment) {
+    return null;
+  }
+
+  const lines = raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const paymentMethod =
+    lines
+      .find((line) => line.startsWith("付款方式："))
+      ?.replace("付款方式：", "")
+      .trim() ||
+    useCase.replace("付款确认 -", "").trim() ||
+    "未识别";
+
+  const paymentProof =
+    lines
+      .find((line) => line.startsWith("付款凭证："))
+      ?.replace("付款凭证：", "")
+      .trim() || "未填写";
+
+  const extraMessage =
+    lines
+      .find((line) => line.startsWith("补充说明："))
+      ?.replace("补充说明：", "")
+      .trim() || "未填写";
+
+  return {
+    paymentMethod,
+    paymentProof,
+    extraMessage,
+  };
+}
+
+function isLink(value: string) {
+  return value.startsWith("http://") || value.startsWith("https://");
+}
+
 export default function AdminSubmissionsPage() {
   const [applications, setApplications] = useState<ProApplication[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
@@ -290,6 +335,16 @@ export default function AdminSubmissionsPage() {
     }
   }
 
+  async function copyPaymentProof(paymentProof: string) {
+    try {
+      await navigator.clipboard.writeText(paymentProof);
+      setNotice("付款凭证已复制。");
+      setError("");
+    } catch {
+      setError("复制失败，请手动选中付款凭证复制。");
+    }
+  }
+
   async function handleLogout() {
     try {
       await fetch("/api/admin/logout", {
@@ -316,6 +371,10 @@ export default function AdminSubmissionsPage() {
             </Link>
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
+              <Link href="/admin" className="hover:text-white">
+                后台首页
+              </Link>
+
               <Link href="/admin/plans" className="hover:text-white">
                 套餐管理
               </Link>
@@ -354,12 +413,12 @@ export default function AdminSubmissionsPage() {
             <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-tight md:text-6xl">
               提交记录
               <span className="block bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
-                查看 Pro 申请和联系反馈
+                查看 Pro 申请和付款确认
               </span>
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              这里会显示用户提交的 Pro 会员申请和联系反馈，支持一键开通、按邮箱开通、标记状态和复制用户 ID。
+              这里会显示用户提交的 Pro 会员申请、付款确认和联系反馈，支持一键开通、按邮箱开通、标记状态和复制用户 ID。
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -427,6 +486,10 @@ export default function AdminSubmissionsPage() {
                   const currentStatus =
                     statusMap[item.status] || statusMap.pending;
                   const planTag = getPlanTag(item.plan);
+                  const paymentInfo = parsePaymentMessage(
+                    item.message,
+                    item.use_case
+                  );
                   const isUpdating = updatingId === item.id;
                   const isApproving = approvingId === item.id;
 
@@ -447,6 +510,12 @@ export default function AdminSubmissionsPage() {
                             >
                               {planTag.label}
                             </div>
+
+                            {paymentInfo ? (
+                              <div className="rounded-full border border-emerald-300/30 bg-emerald-500/15 px-3 py-1 text-xs font-black text-emerald-100">
+                                付款确认
+                              </div>
+                            ) : null}
                           </div>
 
                           <div className="mt-1 text-sm text-white/50">
@@ -500,9 +569,74 @@ export default function AdminSubmissionsPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-7 text-white/65">
-                        {item.message || "未填写补充说明"}
-                      </div>
+                      {paymentInfo ? (
+                        <div className="mt-4 space-y-3">
+                          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+                            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                              <div className="text-sm font-black text-emerald-100">
+                                付款确认信息
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  copyPaymentProof(paymentInfo.paymentProof)
+                                }
+                                className="rounded-full border border-emerald-300/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100 transition hover:bg-emerald-500/20"
+                              >
+                                复制付款凭证
+                              </button>
+                            </div>
+
+                            <div className="grid gap-3 text-sm text-emerald-100/80 md:grid-cols-2">
+                              <div>
+                                <span className="text-emerald-100/45">
+                                  付款方式：
+                                </span>
+                                {paymentInfo.paymentMethod}
+                              </div>
+
+                              <div>
+                                <span className="text-emerald-100/45">
+                                  付款凭证：
+                                </span>
+                                {isLink(paymentInfo.paymentProof) ? (
+                                  <a
+                                    href={paymentInfo.paymentProof}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="break-all text-white underline underline-offset-4"
+                                  >
+                                    打开截图链接
+                                  </a>
+                                ) : (
+                                  <span className="break-all">
+                                    {paymentInfo.paymentProof}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <span className="text-emerald-100/45">
+                                  补充说明：
+                                </span>
+                                {paymentInfo.extraMessage}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs leading-6 text-white/40">
+                            原始内容：
+                            <pre className="mt-2 whitespace-pre-wrap break-words font-sans">
+                              {item.message || "未填写"}
+                            </pre>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-7 text-white/65">
+                          {item.message || "未填写补充说明"}
+                        </div>
+                      )}
 
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button
