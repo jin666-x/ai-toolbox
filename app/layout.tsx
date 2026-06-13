@@ -8,6 +8,8 @@ const siteTitle = "AI Bot Pro - 一站式 AI 工具箱";
 const siteDescription =
   "AI Bot Pro 是一站式 AI 效率工具箱，支持 AI 聊天、爆款文案、标题生成、广告优化、短视频脚本、SEO文章、日报周报、代码助手和文本润色，输入简单需求即可快速生成结果。";
 
+const ogImageUrl = "/og-image-v2.png";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -102,7 +104,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.png",
+        url: ogImageUrl,
         width: 1200,
         height: 630,
         alt: "AI Bot Pro 一站式 AI 工具箱",
@@ -115,7 +117,7 @@ export const metadata: Metadata = {
     title: siteTitle,
     description:
       "不会写提示词也能用，输入简单需求，AI 自动帮你生成文案、标题、脚本、文章和方案。",
-    images: ["/og-image.png"],
+    images: [ogImageUrl],
   },
 
   formatDetection: {
