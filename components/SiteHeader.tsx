@@ -73,10 +73,10 @@ export default function SiteHeader() {
           </Link>
 
           <Link
-            href="/waitlist"
+            href="/checkout"
             className="rounded-full border border-purple-300/30 bg-purple-500/20 px-5 py-2 text-sm font-bold text-purple-100 transition hover:bg-purple-500/30"
           >
-            申请 Pro
+            升级 Pro
           </Link>
 
           <Link
@@ -126,11 +126,19 @@ export default function SiteHeader() {
             </Link>
 
             <Link
-              href="/waitlist"
+              href="/dashboard"
+              onClick={() => setOpen(false)}
+              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-white/10"
+            >
+              进入会员中心
+            </Link>
+
+            <Link
+              href="/checkout"
               onClick={() => setOpen(false)}
               className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-4 py-3 text-center text-sm font-black text-purple-100 transition hover:bg-purple-500/30"
             >
-              申请 Pro 会员
+              升级 / 续费 Pro
             </Link>
 
             <Link
