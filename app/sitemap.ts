@@ -3,66 +3,53 @@ import type { MetadataRoute } from "next";
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://aibotpro.top";
 
-  return [
+  const publicPages = [
     {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: "daily",
+      path: "",
       priority: 1,
+      changeFrequency: "daily" as const,
     },
     {
-      url: `${baseUrl}/chat`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
+      path: "/chat",
       priority: 0.9,
+      changeFrequency: "daily" as const,
     },
     {
-      url: `${baseUrl}/pricing`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
+      path: "/pricing",
+      priority: 0.9,
+      changeFrequency: "weekly" as const,
+    },
+    {
+      path: "/waitlist",
       priority: 0.8,
+      changeFrequency: "weekly" as const,
     },
     {
-      url: `${baseUrl}/waitlist`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.75,
-    },
-    {
-      url: `${baseUrl}/dashboard`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
+      path: "/contact",
       priority: 0.7,
+      changeFrequency: "monthly" as const,
     },
     {
-      url: `${baseUrl}/login`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/about`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
+      path: "/about",
       priority: 0.6,
+      changeFrequency: "monthly" as const,
     },
     {
-      url: `${baseUrl}/contact`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.6,
+      path: "/privacy",
+      priority: 0.4,
+      changeFrequency: "yearly" as const,
     },
     {
-      url: `${baseUrl}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.5,
+      path: "/terms",
+      priority: 0.4,
+      changeFrequency: "yearly" as const,
     },
   ];
+
+  return publicPages.map((page) => ({
+    url: `${baseUrl}${page.path}`,
+    lastModified: new Date(),
+    changeFrequency: page.changeFrequency,
+    priority: page.priority,
+  }));
 }
