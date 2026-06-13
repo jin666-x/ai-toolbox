@@ -5,10 +5,34 @@ import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
-const LOGIN_DAILY_LIMIT = 10;
+const FREE_DAILY_LIMIT = 10;
+
+type PlanType = "free" | "pro";
+
+type UserPlanState = {
+  plan: PlanType;
+  dailyLimit: number;
+  expiredAt: string | null;
+};
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function getPlanName(plan: PlanType) {
+  if (plan === "pro") {
+    return "Pro 会员版";
+  }
+
+  return "Free 免费版";
+}
+
+function getPlanDesc(plan: PlanType, dailyLimit: number) {
+  if (plan === "pro") {
+    return `当前账号已开通 Pro 会员，每日可使用 ${dailyLimit} 次 AI 工具。`;
+  }
+
+  return `当前账号为 Free 免费版，每日可使用 ${dailyLimit} 次 AI 工具。`;
 }
 
 export default function DashboardPage() {
@@ -17,10 +41,20 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [logoutLoading, setLogoutLoading] = useState(false);
-  const [usedCount, setUsedCount] = useState(0);
   const [usageLoading, setUsageLoading] = useState(true);
 
-  const remainingCount = Math.max(LOGIN_DAILY_LIMIT - usedCount, 0);
+  const [userPlan, setUserPlan] = useState<UserPlanState>({
+    plan: "free",
+    dailyLimit: FREE_DAILY_LIMIT,
+    expiredAt: null,
+  });
+
+  const [usedCount, setUsedCount] = useState(0);
+
+  const dailyLimit = userPlan.dailyLimit;
+  const remainingCount = Math.max(dailyLimit - usedCount, 0);
+  const usagePercent =
+    dailyLimit > 0 ? Math.min((usedCount / dailyLimit) * 100, 100) : 0;
 
   useEffect(() => {
     let mounted = true;
@@ -46,9 +80,48 @@ export default function DashboardPage() {
       setUser(session.user);
       setLoading(false);
 
+      const { data: planData, error: planError } = await supabase
+        .from("user_plans")
+        .select("plan,daily_limit,expired_at")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (!mounted) return;
+
+      let finalPlan: UserPlanState = {
+        plan: "free",
+        dailyLimit: FREE_DAILY_LIMIT,
+        expiredAt: null,
+      };
+
+      if (planError) {
+        console.error("读取用户套餐失败：", planError);
+      } else if (planData) {
+        const dbPlan = planData.plan === "pro" ? "pro" : "free";
+        const dbDailyLimit = Number(planData.daily_limit || FREE_DAILY_LIMIT);
+        const expiredAt = planData.expired_at ? String(planData.expired_at) : null;
+
+        const isExpired = expiredAt
+          ? new Date(expiredAt).getTime() <= Date.now()
+          : false;
+
+        if (!isExpired) {
+          finalPlan = {
+            plan: dbPlan,
+            dailyLimit:
+              Number.isFinite(dbDailyLimit) && dbDailyLimit > 0
+                ? dbDailyLimit
+                : FREE_DAILY_LIMIT,
+            expiredAt,
+          };
+        }
+      }
+
+      setUserPlan(finalPlan);
+
       const today = getTodayDate();
 
-      const { data, error } = await supabase
+      const { data: usageData, error: usageError } = await supabase
         .from("user_daily_usage")
         .select("used_count")
         .eq("user_id", session.user.id)
@@ -57,11 +130,11 @@ export default function DashboardPage() {
 
       if (!mounted) return;
 
-      if (error) {
-        console.error("读取今日使用次数失败：", error);
+      if (usageError) {
+        console.error("读取今日使用次数失败：", usageError);
         setUsedCount(0);
       } else {
-        setUsedCount(Number(data?.used_count || 0));
+        setUsedCount(Number(usageData?.used_count || 0));
       }
 
       setUsageLoading(false);
@@ -174,7 +247,7 @@ export default function DashboardPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              在这里可以查看账号信息、今日 AI 使用次数和当前套餐状态。
+              在这里可以查看账号信息、当前套餐、今日 AI 使用次数和剩余次数。
             </p>
           </div>
         </div>
@@ -199,12 +272,36 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+            <div
+              className={`rounded-2xl border p-5 ${
+                userPlan.plan === "pro"
+                  ? "border-purple-400/30 bg-purple-500/10"
+                  : "border-white/10 bg-black/30"
+              }`}
+            >
               <div className="text-sm text-white/45">当前套餐</div>
-              <div className="mt-2 text-lg font-black">Free 免费版</div>
-              <p className="mt-2 text-sm leading-6 text-white/50">
-                当前登录账号每日可使用 {LOGIN_DAILY_LIMIT} 次 AI 工具。
+
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <div className="text-2xl font-black">
+                  {getPlanName(userPlan.plan)}
+                </div>
+
+                {userPlan.plan === "pro" && (
+                  <div className="rounded-full border border-purple-300/30 bg-purple-400/10 px-3 py-1 text-xs font-black text-purple-200">
+                    PRO
+                  </div>
+                )}
+              </div>
+
+              <p className="mt-2 text-sm leading-6 text-white/55">
+                {getPlanDesc(userPlan.plan, dailyLimit)}
               </p>
+
+              {userPlan.expiredAt && userPlan.plan === "pro" && (
+                <p className="mt-2 text-xs text-white/45">
+                  到期时间：{new Date(userPlan.expiredAt).toLocaleString("zh-CN")}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -219,34 +316,36 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="mt-6 space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-                  <div className="text-sm text-white/45">今日已用</div>
-                  <div className="mt-2 text-4xl font-black">
-                    {usedCount} / {LOGIN_DAILY_LIMIT}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                    <div className="text-sm text-white/45">今日已用</div>
+                    <div className="mt-2 text-4xl font-black">
+                      {usedCount} / {dailyLimit}
+                    </div>
                   </div>
-                </div>
 
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-                  <div className="text-sm text-white/45">今日剩余</div>
-                  <div className="mt-2 text-4xl font-black text-emerald-300">
-                    {remainingCount}
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                    <div className="text-sm text-white/45">今日剩余</div>
+                    <div className="mt-2 text-4xl font-black text-emerald-300">
+                      {remainingCount}
+                    </div>
                   </div>
-                  <p className="mt-2 text-sm text-white/50">
-                    次数每天自动刷新。
-                  </p>
                 </div>
 
                 <div className="h-3 overflow-hidden rounded-full bg-white/10">
                   <div
-                    className="h-full rounded-full bg-white"
+                    className={`h-full rounded-full ${
+                      userPlan.plan === "pro" ? "bg-purple-300" : "bg-white"
+                    }`}
                     style={{
-                      width: `${Math.min(
-                        (usedCount / LOGIN_DAILY_LIMIT) * 100,
-                        100
-                      )}%`,
+                      width: `${usagePercent}%`,
                     }}
                   />
                 </div>
+
+                <p className="text-sm text-white/45">
+                  次数每天自动刷新。当前套餐：{getPlanName(userPlan.plan)}。
+                </p>
               </div>
             )}
           </div>

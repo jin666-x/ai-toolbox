@@ -4,7 +4,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const MAX_MESSAGE_LENGTH = 2000;
 
 const ANONYMOUS_DAILY_LIMIT = 5;
-const LOGIN_DAILY_LIMIT = 10;
+const FREE_DAILY_LIMIT = 10;
+
+type UserPlan = {
+  plan: "free" | "pro";
+  dailyLimit: number;
+};
 
 type AnonymousUsageRecord = {
   date: string;
@@ -116,7 +121,48 @@ async function getLoginUser(req: Request) {
   return user;
 }
 
-async function getUserUsage(userId: string) {
+async function getUserPlan(userId: string): Promise<UserPlan> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("user_plans")
+    .select("plan,daily_limit,expired_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("读取用户套餐失败：", error);
+    throw new Error("读取用户套餐失败。");
+  }
+
+  if (!data) {
+    return {
+      plan: "free",
+      dailyLimit: FREE_DAILY_LIMIT,
+    };
+  }
+
+  const plan = data.plan === "pro" ? "pro" : "free";
+  const dailyLimit = Number(data.daily_limit || FREE_DAILY_LIMIT);
+  const expiredAt = data.expired_at ? new Date(data.expired_at) : null;
+
+  if (expiredAt && expiredAt.getTime() <= Date.now()) {
+    return {
+      plan: "free",
+      dailyLimit: FREE_DAILY_LIMIT,
+    };
+  }
+
+  return {
+    plan,
+    dailyLimit:
+      Number.isFinite(dailyLimit) && dailyLimit > 0
+        ? dailyLimit
+        : FREE_DAILY_LIMIT,
+  };
+}
+
+async function getUserUsage(userId: string, limit: number) {
   const supabase = createAdminClient();
   const today = getTodayDate();
 
@@ -138,8 +184,8 @@ async function getUserUsage(userId: string) {
     userId,
     date: today,
     used,
-    limit: LOGIN_DAILY_LIMIT,
-    remaining: Math.max(LOGIN_DAILY_LIMIT - used, 0),
+    limit,
+    remaining: Math.max(limit - used, 0),
   };
 }
 
@@ -194,6 +240,7 @@ export async function POST(req: Request) {
     const loginUser = await getLoginUser(req);
 
     let usageType: "login" | "anonymous" = "anonymous";
+    let plan: "free" | "pro" | "anonymous" = "anonymous";
     let usageKey = "";
     let userId = "";
     let used = 0;
@@ -203,17 +250,25 @@ export async function POST(req: Request) {
       usageType = "login";
       userId = loginUser.id;
 
-      const userUsage = await getUserUsage(loginUser.id);
+      const userPlan = await getUserPlan(loginUser.id);
+
+      plan = userPlan.plan;
+      limit = userPlan.dailyLimit;
+
+      const userUsage = await getUserUsage(loginUser.id, limit);
 
       used = userUsage.used;
-      limit = userUsage.limit;
 
       if (used >= limit) {
         return Response.json(
           {
-            error: "你今天的登录账号免费次数已经用完。",
+            error:
+              plan === "pro"
+                ? "你今天的 Pro 会员次数已经用完。"
+                : "你今天的 Free 免费次数已经用完。",
             usage: {
               type: "login",
+              plan,
               used,
               limit,
               remaining: 0,
@@ -235,6 +290,7 @@ export async function POST(req: Request) {
             error: "你今天的免费体验次数已经用完，请登录账号或申请 Pro。",
             usage: {
               type: "anonymous",
+              plan: "anonymous",
               used,
               limit,
               remaining: 0,
@@ -251,7 +307,7 @@ export async function POST(req: Request) {
         {
           role: "system",
           content:
-            "你是 AI Bot Pro 的智能助手，请用清晰、实用、适合中文用户的方式回答。",
+            "你是 AI Bot Pro 的智能助手，专注于中文问答、文案生成、代码解释和办公效率。请用清晰、实用、适合中文用户的方式回答。不要声称自己是 GPT-4、GPT-3.5 或其他具体模型版本。",
         },
         {
           role: "user",
@@ -282,6 +338,7 @@ export async function POST(req: Request) {
       reply,
       usage: {
         type: usageType,
+        plan,
         used: nextUsed,
         limit,
         remaining: Math.max(limit - nextUsed, 0),
