@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SiteHeader from "@/components/SiteHeader";
 
 const tools = [
   {
@@ -101,53 +102,7 @@ export default function HomePage() {
     <main className="min-h-screen overflow-hidden bg-black text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.24),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.22),transparent_35%)]" />
 
-      <header className="relative mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <Link href="/" className="text-2xl font-black tracking-tight">
-          AI Bot Pro
-        </Link>
-
-        <nav className="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
-          <a href="#tools" className="hover:text-white">
-            工具
-          </a>
-
-          <a href="#plans" className="hover:text-white">
-            额度
-          </a>
-
-          <a href="#steps" className="hover:text-white">
-            流程
-          </a>
-
-          <Link href="/pricing" className="hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="hover:text-white">
-            申请 Pro
-          </Link>
-
-          <Link href="/dashboard" className="hover:text-white">
-            会员中心
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="hidden rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
-          >
-            登录
-          </Link>
-
-          <Link
-            href="/chat"
-            className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-          >
-            立即使用
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="relative mx-auto flex max-w-7xl flex-col items-center px-6 pb-20 pt-16 text-center md:pt-24">
         <div className="mb-6 rounded-full border border-white/10 bg-white/10 px-5 py-2 text-sm text-zinc-300 backdrop-blur-xl">
