@@ -22,18 +22,71 @@ const initialForm: WaitlistForm = {
   message: "",
 };
 
+const planOptions = [
+  {
+    value: "Pro 月卡",
+    name: "Pro 月卡",
+    price: "￥19.9",
+    unit: "/ 月",
+    badge: "推荐",
+    desc: "适合经常生成文案、标题、脚本、广告词的用户。",
+    features: ["每日 100 次", "人工开通", "邮件通知"],
+    hot: true,
+  },
+  {
+    value: "Pro 年卡",
+    name: "Pro 年卡",
+    price: "￥199",
+    unit: "/ 年",
+    badge: "更划算",
+    desc: "适合长期稳定使用 AI 工具的个人、团队和创业者。",
+    features: ["全年使用", "每日 100 次", "长期更省"],
+    hot: false,
+  },
+  {
+    value: "先试用 Pro",
+    name: "试用 Pro",
+    price: "试用",
+    unit: "",
+    badge: "体验",
+    desc: "适合先体验 Pro 额度和功能，再决定是否长期开通。",
+    features: ["先体验", "人工审核", "适合新用户"],
+    hot: false,
+  },
+  {
+    value: "团队 / 定制方案",
+    name: "团队方案",
+    price: "定制",
+    unit: "",
+    badge: "团队",
+    desc: "适合团队办公、批量使用、长期内容生产场景。",
+    features: ["团队使用", "额度可谈", "专属沟通"],
+    hot: false,
+  },
+];
+
+const useCases = [
+  "内容创作",
+  "短视频脚本",
+  "营销广告",
+  "代码开发",
+  "团队办公",
+  "副业赚钱",
+  "其他场景",
+];
+
 const proBenefits = [
   {
     title: "每日 100 次",
     desc: "适合高频生成文案、脚本、标题、广告词。",
   },
   {
-    title: "会员中心显示",
-    desc: "开通后可在会员中心查看 Pro 状态和剩余次数。",
+    title: "后台一键开通",
+    desc: "提交申请后，管理员可以直接为你的账号开通 Pro。",
   },
   {
-    title: "人工开通权限",
-    desc: "提交申请后，我们会联系你并为账号开通权限。",
+    title: "邮件通知",
+    desc: "开通成功后，系统会通过邮箱通知你登录使用。",
   },
 ];
 
@@ -46,6 +99,9 @@ export default function WaitlistPage() {
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  const selectedPlan =
+    planOptions.find((item) => item.value === form.plan) || planOptions[0];
 
   function updateField(key: keyof WaitlistForm, value: string) {
     setForm((prev) => ({
@@ -198,7 +254,7 @@ ${form.message || "未填写"}`,
             </div>
           </nav>
 
-          <div className="grid gap-10 py-12 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+          <div className="grid gap-10 py-12 lg:grid-cols-[1fr_0.9fr] lg:items-start">
             <div>
               <div className="mb-5 inline-flex rounded-full border border-purple-300/30 bg-purple-500/10 px-4 py-2 text-sm font-bold text-purple-100">
                 Pro 会员申请
@@ -212,8 +268,8 @@ ${form.message || "未填写"}`,
               </h1>
 
               <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-                当前 Pro 会员先采用人工开通方式。提交申请后，我们会收到邮件通知，
-                确认后为你的账号开通 Pro 权限。
+                当前 Pro 会员先采用人工开通方式。提交申请后，后台会收到记录，
+                管理员确认后可直接为你的账号开通 Pro 权限，并发送邮件通知。
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -236,11 +292,63 @@ ${form.message || "未填写"}`,
                 </div>
 
                 <div className="mt-4 space-y-3 text-sm leading-7 text-purple-100/75">
-                  <p>1. 先登录账号，再提交 Pro 会员申请。</p>
-                  <p>2. 系统会自动记录你的用户 ID。</p>
-                  <p>3. 管理员确认后，可以直接为该账号开通 Pro。</p>
+                  <p>1. 建议先登录账号，再提交 Pro 会员申请。</p>
+                  <p>2. 系统会自动记录你的用户 ID，方便后台一键开通。</p>
+                  <p>3. 管理员确认套餐后，为该账号开通 Pro。</p>
                   <p>4. 开通后进入会员中心和 AI 工具页，即可看到 Pro 额度。</p>
                 </div>
+              </div>
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                {planOptions.map((plan) => (
+                  <button
+                    key={plan.value}
+                    type="button"
+                    onClick={() => updateField("plan", plan.value)}
+                    className={
+                      form.plan === plan.value
+                        ? "rounded-3xl border border-purple-300/50 bg-purple-500/20 p-5 text-left shadow-2xl shadow-purple-500/10 transition"
+                        : "rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-left transition hover:bg-white/[0.07]"
+                    }
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="text-xl font-black">{plan.name}</div>
+                      <div
+                        className={
+                          plan.hot
+                            ? "rounded-full bg-white px-3 py-1 text-xs font-black text-black"
+                            : "rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs font-bold text-white/60"
+                        }
+                      >
+                        {plan.badge}
+                      </div>
+                    </div>
+
+                    <div className="flex items-end gap-2">
+                      <div className="text-3xl font-black">{plan.price}</div>
+                      {plan.unit ? (
+                        <div className="pb-1 text-sm text-white/45">
+                          {plan.unit}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <p className="mt-3 text-sm leading-6 text-white/55">
+                      {plan.desc}
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {plan.features.map((feature) => (
+                        <span
+                          key={feature}
+                          className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs text-white/60"
+                        >
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -269,6 +377,20 @@ ${form.message || "未填写"}`,
                   </Link>
                 ) : null}
 
+                <div className="rounded-2xl border border-purple-300/20 bg-purple-500/10 p-4">
+                  <div className="text-xs font-bold text-purple-100/60">
+                    当前选择套餐
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-end gap-2">
+                    <div className="text-2xl font-black text-purple-100">
+                      {selectedPlan.name}
+                    </div>
+                    <div className="pb-1 text-sm text-purple-100/60">
+                      {selectedPlan.price} {selectedPlan.unit}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="mb-2 block text-sm font-bold text-white/75">
                     你的称呼
@@ -293,7 +415,7 @@ ${form.message || "未填写"}`,
                     onChange={(event) =>
                       updateField("email", event.target.value)
                     }
-                    placeholder="用于接收后续联系"
+                    placeholder="用于接收开通通知"
                     className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/30"
                   />
                 </div>
@@ -314,25 +436,6 @@ ${form.message || "未填写"}`,
 
                 <div>
                   <label className="mb-2 block text-sm font-bold text-white/75">
-                    想开通的套餐
-                  </label>
-                  <select
-                    value={form.plan}
-                    onChange={(event) =>
-                      updateField("plan", event.target.value)
-                    }
-                    className="w-full rounded-2xl border border-white/10 bg-[#090909] px-5 py-4 text-white outline-none transition focus:border-white/30"
-                  >
-                    <option value="Pro 月卡">Pro 月卡 ￥19.9 / 月</option>
-                    <option value="Pro 年卡">Pro 年卡 ￥199 / 年</option>
-                    <option value="先试用 Pro">先试用 Pro</option>
-                    <option value="团队 / 定制方案">团队 / 定制方案</option>
-                    <option value="先咨询价格">先咨询价格</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-bold text-white/75">
                     主要使用场景
                   </label>
                   <select
@@ -343,13 +446,11 @@ ${form.message || "未填写"}`,
                     className="w-full rounded-2xl border border-white/10 bg-[#090909] px-5 py-4 text-white outline-none transition focus:border-white/30"
                   >
                     <option value="">请选择使用场景</option>
-                    <option value="内容创作">内容创作</option>
-                    <option value="短视频脚本">短视频脚本</option>
-                    <option value="营销广告">营销广告</option>
-                    <option value="代码开发">代码开发</option>
-                    <option value="团队办公">团队办公</option>
-                    <option value="副业赚钱">副业赚钱</option>
-                    <option value="其他场景">其他场景</option>
+                    {useCases.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -395,11 +496,11 @@ ${form.message || "未填写"}`,
                 ) : null}
 
                 <p className="text-center text-xs leading-6 text-white/40">
-                  提交后我们会通过邮件与你联系。也可以直接前往{" "}
-                  <Link href="/contact" className="text-white underline">
-                    联系我们
+                  提交后管理员会在后台审核。开通成功后，你会收到邮件通知，也可以进入{" "}
+                  <Link href="/dashboard" className="text-white underline">
+                    会员中心
                   </Link>
-                  页面留言。
+                  查看 Pro 状态。
                 </p>
               </form>
             </div>
