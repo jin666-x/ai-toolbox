@@ -2,73 +2,86 @@ import Link from "next/link";
 
 const plans = [
   {
-    name: "免费体验",
+    name: "Free 免费版",
     price: "￥0",
     unit: "/ 永久",
-    desc: "适合新用户体验基础 AI 工具。",
+    desc: "适合新用户体验 AI 工具箱，登录后每日可使用 10 次。",
     features: [
-      "每日免费使用 5 次",
+      "登录账号每日 10 次",
+      "未登录体验每日 5 次",
       "支持 AI 聊天助手",
       "支持爆款文案生成",
       "支持标题生成",
       "支持广告优化",
       "支持代码助手",
+      "会员中心查看今日次数",
     ],
-    button: "免费开始使用",
+    button: "立即免费使用",
     href: "/chat",
     hot: false,
     status: "当前可用",
+    note: "注册 / 登录后可获得每日 10 次使用额度。",
   },
   {
     name: "Pro 月卡",
     price: "￥19.9",
     unit: "/ 月",
-    desc: "适合经常生成文案、标题、广告词的用户。",
+    desc: "适合经常生成文案、标题、脚本、广告词的用户。",
     features: [
-      "每日更高使用次数",
+      "每日 100 次 AI 使用额度",
       "解锁全部 AI 工具",
-      "支持更长内容生成",
       "适合短视频运营",
       "适合自媒体创作",
       "适合销售和广告投放",
+      "优先体验新功能",
+      "会员中心显示 Pro 状态",
+      "人工开通会员权限",
     ],
-    button: "加入等待名单",
+    button: "申请开通 Pro",
     href: "/waitlist",
     hot: true,
-    status: "即将开放",
+    status: "人工开通",
+    note: "当前支付功能暂未开放，可提交申请后由管理员开通。",
   },
   {
     name: "Pro 年卡",
     price: "￥199",
     unit: "/ 年",
-    desc: "适合长期使用 AI 工具提升效率的用户。",
+    desc: "适合长期使用 AI 工具提升效率的个人、团队和创业者。",
     features: [
       "全年使用更划算",
-      "每日更高使用次数",
+      "每日 100 次 AI 使用额度",
       "优先体验新工具",
-      "适合团队和个人长期使用",
+      "适合长期内容生产",
       "适合副业、自媒体、创业者",
       "后续可升级更多权益",
+      "支持后台人工开通",
+      "适合重度使用用户",
     ],
-    button: "加入等待名单",
-    href: "/waitlist",
+    button: "咨询年卡方案",
+    href: "/contact",
     hot: false,
-    status: "即将开放",
+    status: "人工开通",
+    note: "年卡适合长期用户，可先联系我们确认开通方式。",
   },
 ];
 
 const faqs = [
   {
-    q: "现在可以付费购买吗？",
-    a: "当前套餐页面是展示版，支付功能后续开放。现在可以先免费体验 AI 工具箱，Pro 套餐可先加入等待名单。",
+    q: "现在可以直接支付购买吗？",
+    a: "当前支付功能还没有接入。Pro 会员可以先通过等待名单或联系页面提交申请，然后由管理员在后台手动开通。",
   },
   {
-    q: "免费版可以用哪些功能？",
-    a: "免费版支持 AI 聊天助手、爆款文案、标题生成、广告优化、代码助手等基础工具。",
+    q: "免费版每天可以用几次？",
+    a: "未登录用户每日可体验 5 次。注册并登录后，Free 免费版账号每日可使用 10 次。",
   },
   {
-    q: "后续 Pro 版会增加什么？",
-    a: "后续 Pro 版会提供更高使用次数、更长内容生成、更多专业工具、会员中心和更多权益。",
+    q: "Pro 会员每天可以用几次？",
+    a: "当前 Pro 会员默认每日可使用 100 次，后续也可以根据套餐继续扩展更多次数。",
+  },
+  {
+    q: "怎么知道自己是不是 Pro？",
+    a: "登录后进入会员中心，可以看到当前套餐、今日已用次数和今日剩余次数。",
   },
 ];
 
@@ -114,17 +127,17 @@ export default function PricingPage() {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/login"
+            href="/dashboard"
             className="hidden rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
           >
-            登录
+            会员中心
           </Link>
 
           <Link
             href="/chat"
             className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
           >
-            免费体验
+            立即使用
           </Link>
         </div>
       </header>
@@ -143,8 +156,8 @@ export default function PricingPage() {
         </h1>
 
         <p className="mx-auto mt-8 max-w-3xl text-lg leading-8 text-zinc-400">
-          先免费体验 AI 工具箱，后续可升级更多次数和高级功能。
-          当前套餐页面为展示版，支付功能即将开放。
+          免费版适合体验，Pro 版适合高频创作、文案生成、短视频脚本、广告优化和办公效率提升。
+          当前 Pro 会员支持后台人工开通，支付功能后续接入。
         </p>
 
         <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
@@ -152,21 +165,21 @@ export default function PricingPage() {
             href="/chat"
             className="rounded-2xl bg-white px-8 py-4 text-lg font-black text-black transition hover:bg-zinc-200"
           >
-            免费体验
+            免费开始使用
           </Link>
 
           <Link
             href="/waitlist"
-            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
+            className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 text-lg font-black text-purple-100 transition hover:bg-purple-500/30"
           >
-            加入等待名单
+            申请 Pro 会员
           </Link>
 
           <Link
             href="/contact"
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
           >
-            咨询 Pro 套餐
+            联系我们
           </Link>
         </div>
       </section>
@@ -177,7 +190,7 @@ export default function PricingPage() {
             key={plan.name}
             className={`relative rounded-[2rem] border p-8 backdrop-blur-xl transition hover:-translate-y-1 ${
               plan.hot
-                ? "border-blue-400/50 bg-blue-500/10 shadow-2xl shadow-blue-500/10"
+                ? "border-purple-400/50 bg-purple-500/10 shadow-2xl shadow-purple-500/10"
                 : "border-white/10 bg-white/5"
             }`}
           >
@@ -221,16 +234,18 @@ export default function PricingPage() {
               {plan.button}
             </Link>
 
-            {plan.status === "即将开放" && (
-              <p className="mt-3 text-center text-xs text-zinc-500">
-                支付功能暂未开放，可先加入等待名单，后续优先体验 Pro 权益。
-              </p>
-            )}
+            <p className="mt-3 min-h-10 text-center text-xs leading-5 text-zinc-500">
+              {plan.note}
+            </p>
 
             <div className="mt-8 space-y-4">
               {plan.features.map((feature) => (
                 <div key={feature} className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+                  <span
+                    className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
+                      plan.hot ? "bg-purple-300" : "bg-emerald-400"
+                    }`}
+                  />
                   <span className="text-left text-zinc-300">{feature}</span>
                 </div>
               ))}
@@ -243,20 +258,19 @@ export default function PricingPage() {
         <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl md:p-12">
           <div className="grid gap-10 md:grid-cols-2 md:items-center">
             <div>
-              <div className="mb-4 text-sm font-bold text-blue-400">
-                PRO WAITLIST
+              <div className="mb-4 text-sm font-bold text-purple-300">
+                PRO MEMBERSHIP
               </div>
 
               <h2 className="text-4xl font-black md:text-5xl">
-                Pro 即将开放，
+                Pro 会员已支持，
                 <br />
-                先加入等待名单
+                可人工开通权限
               </h2>
 
               <p className="mt-6 leading-8 text-zinc-400">
-                后续接入登录、数据库和支付后，Pro 套餐可以提供更多使用次数、
-                更长内容生成、更多专业工具和会员权益。现在可以先进入等待名单页面，
-                后续方便接入邮箱收集和用户需求登记。
+                当前系统已经支持登录账号、会员中心、每日使用次数、Free / Pro
+                套餐识别和后台开通会员。支付功能后续接入前，可以先通过等待名单或联系页面提交申请。
               </p>
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -264,7 +278,7 @@ export default function PricingPage() {
                   href="/waitlist"
                   className="inline-flex rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
                 >
-                  加入等待名单
+                  申请 Pro
                 </Link>
 
                 <Link
@@ -279,20 +293,20 @@ export default function PricingPage() {
             <div className="space-y-4">
               <div className="rounded-3xl border border-white/10 bg-black/30 p-6">
                 <div className="text-3xl font-black">5 次/天</div>
-                <div className="mt-2 text-zinc-400">免费用户每日体验次数</div>
+                <div className="mt-2 text-zinc-400">未登录用户每日体验次数</div>
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-black/30 p-6">
-                <div className="text-3xl font-black">Pro 权益</div>
-                <div className="mt-2 text-zinc-400">
-                  后续支持更高次数和更多高级功能
+                <div className="text-3xl font-black">10 次/天</div>
+                <div className="mt-2 text-zinc-400">Free 免费账号每日次数</div>
+              </div>
+
+              <div className="rounded-3xl border border-purple-300/20 bg-purple-500/10 p-6">
+                <div className="text-3xl font-black text-purple-100">
+                  100 次/天
                 </div>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-black/30 p-6">
-                <div className="text-3xl font-black">等待开放</div>
-                <div className="mt-2 text-zinc-400">
-                  支付、登录、订单和数据库后续接入
+                <div className="mt-2 text-purple-100/70">
+                  Pro 会员账号每日次数
                 </div>
               </div>
             </div>
@@ -304,11 +318,11 @@ export default function PricingPage() {
         <div className="mb-10 text-center">
           <h2 className="text-4xl font-black">常见问题</h2>
           <p className="mt-4 text-zinc-400">
-            关于套餐和使用次数，你可能想知道这些。
+            关于套餐、使用次数和 Pro 开通方式，你可能想知道这些。
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           {faqs.map((item) => (
             <div
               key={item.q}
