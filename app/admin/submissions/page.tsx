@@ -55,7 +55,14 @@ export default function AdminSubmissionsPage() {
     try {
       const res = await fetch("/api/admin/submissions", {
         cache: "no-store",
+        credentials: "same-origin",
       });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("后台接口返回异常，请重新通过 admin_key 进入后台。");
+      }
 
       const data = (await res.json()) as SubmissionsResponse;
 

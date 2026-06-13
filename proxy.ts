@@ -16,6 +16,13 @@ export function proxy(request: NextRequest) {
   const adminSecret = process.env.ADMIN_SECRET;
 
   if (!adminSecret) {
+    if (isAdminApi) {
+      return Response.json(
+        { error: "服务器未配置 ADMIN_SECRET。" },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -41,6 +48,13 @@ export function proxy(request: NextRequest) {
     });
 
     return response;
+  }
+
+  if (isAdminApi) {
+    return Response.json(
+      { error: "后台登录已失效，请重新通过 admin_key 进入后台。" },
+      { status: 401 }
+    );
   }
 
   return NextResponse.redirect(new URL("/", request.url));
