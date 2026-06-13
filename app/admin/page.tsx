@@ -9,6 +9,8 @@ type ProApplication = {
   name: string;
   email: string;
   plan: string;
+  use_case: string;
+  message: string | null;
   status: string;
   created_at: string;
 };
@@ -29,27 +31,49 @@ type ProOrder = {
 type DashboardStats = {
   totalApplications: number;
   pendingApplications: number;
+  pendingPaymentApplications: number;
+  pendingNormalApplications: number;
+  todayApplications: number;
+  paymentApplications: number;
   approvedApplications: number;
   contactedApplications: number;
   rejectedApplications: number;
   totalOrders: number;
   activeOrders: number;
+  activeProUsers: number;
   expiredOrders: number;
   refundedOrders: number;
   cancelledOrders: number;
+  todayOrders: number;
   totalMessages: number;
   revenueCents: number;
+  todayRevenueCents: number;
 };
 
 type DashboardResponse = {
   success: boolean;
   stats: DashboardStats;
   recentApplications: ProApplication[];
+  recentPaymentApplications: ProApplication[];
   recentOrders: ProOrder[];
   error?: string;
 };
 
 const adminCards = [
+  {
+    title: "审核付款",
+    desc: "优先处理付款确认、Pro 申请、联系反馈，一键开通或按邮箱开通 Pro。",
+    href: "/admin/submissions",
+    badge: "最常用",
+    className: "border-purple-300/20 bg-purple-500/10",
+  },
+  {
+    title: "开通记录",
+    desc: "查看 Pro 订单记录，停用、恢复、标记退款、检查过期 Pro。",
+    href: "/admin/orders",
+    badge: "订单管理",
+    className: "border-blue-300/20 bg-blue-500/10",
+  },
   {
     title: "套餐管理",
     desc: "手动为用户开通 Free / Pro，设置每日额度和到期时间。",
@@ -57,23 +81,13 @@ const adminCards = [
     badge: "用户套餐",
     className: "border-emerald-300/20 bg-emerald-500/10",
   },
-  {
-    title: "提交记录",
-    desc: "查看 Pro 申请、联系反馈，一键开通 Pro，复制用户 ID。",
-    href: "/admin/submissions",
-    badge: "申请审核",
-    className: "border-purple-300/20 bg-purple-500/10",
-  },
-  {
-    title: "开通记录",
-    desc: "查看 Pro 订单记录，停用、恢复、标记退款、检查过期 Pro。",
-    href: "/admin/orders",
-    badge: "订单记录",
-    className: "border-blue-300/20 bg-blue-500/10",
-  },
 ];
 
 const quickLinks = [
+  {
+    title: "付款页",
+    href: "/checkout",
+  },
   {
     title: "会员中心",
     href: "/dashboard",
@@ -85,10 +99,6 @@ const quickLinks = [
   {
     title: "价格页",
     href: "/pricing",
-  },
-  {
-    title: "申请 Pro",
-    href: "/waitlist",
   },
 ];
 
@@ -133,6 +143,12 @@ const statusMap: Record<
   },
 };
 
+function isPaymentApplication(item: ProApplication) {
+  const raw = item.message || "";
+
+  return raw.includes("【付款确认】") || item.use_case.includes("付款确认");
+}
+
 function formatTime(value: string) {
   try {
     return new Date(value).toLocaleString("zh-CN", {
@@ -165,9 +181,8 @@ function getStatusInfo(status: string) {
 
 export default function AdminHomePage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [recentApplications, setRecentApplications] = useState<
-    ProApplication[]
-  >([]);
+  const [recentApplications, setRecentApplications] = useState<ProApplication[]>([]);
+  const [recentPaymentApplications, setRecentPaymentApplications] = useState<ProApplication[]>([]);
   const [recentOrders, setRecentOrders] = useState<ProOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -196,6 +211,7 @@ export default function AdminHomePage() {
 
       setStats(data.stats);
       setRecentApplications(data.recentApplications || []);
+      setRecentPaymentApplications(data.recentPaymentApplications || []);
       setRecentOrders(data.recentOrders || []);
     } catch (err) {
       setError(
@@ -220,42 +236,81 @@ export default function AdminHomePage() {
     loadDashboard();
   }, []);
 
-  const statCards = [
+  const importantCards = [
     {
-      title: "总申请数",
-      value: stats ? String(stats.totalApplications) : "-",
-      desc: "所有 Pro 申请记录",
-      className: "border-purple-300/20 bg-purple-500/10",
+      title: "待处理付款确认",
+      value: stats ? String(stats.pendingPaymentApplications) : "-",
+      desc: "优先审核，确认后开通 Pro",
+      href: "/admin/submissions",
+      className: "border-red-300/20 bg-red-500/10",
     },
     {
-      title: "待处理申请",
-      value: stats ? String(stats.pendingApplications) : "-",
-      desc: "需要你尽快处理",
+      title: "待处理普通申请",
+      value: stats ? String(stats.pendingNormalApplications) : "-",
+      desc: "用户提交的 Pro 意向申请",
+      href: "/admin/submissions",
       className: "border-yellow-300/20 bg-yellow-500/10",
     },
     {
-      title: "已开通 Pro",
-      value: stats ? String(stats.approvedApplications) : "-",
-      desc: "申请已审核通过",
+      title: "今日新增申请",
+      value: stats ? String(stats.todayApplications) : "-",
+      desc: "按北京时间统计",
+      href: "/admin/submissions",
+      className: "border-purple-300/20 bg-purple-500/10",
+    },
+    {
+      title: "当前生效 Pro 用户",
+      value: stats ? String(stats.activeProUsers) : "-",
+      desc: "按用户 ID / 邮箱去重",
+      href: "/admin/orders",
       className: "border-emerald-300/20 bg-emerald-500/10",
     },
     {
-      title: "开通记录",
-      value: stats ? String(stats.totalOrders) : "-",
-      desc: "Pro 订单/开通流水",
+      title: "已过期订单",
+      value: stats ? String(stats.expiredOrders) : "-",
+      desc: "需要关注是否续费",
+      href: "/admin/orders",
+      className: "border-orange-300/20 bg-orange-500/10",
+    },
+    {
+      title: "总订单金额",
+      value: stats ? formatMoney(stats.revenueCents) : "-",
+      desc: "不含已退款 / 已停用",
+      href: "/admin/orders",
       className: "border-blue-300/20 bg-blue-500/10",
     },
+  ];
+
+  const secondaryCards = [
     {
-      title: "生效中 Pro",
-      value: stats ? String(stats.activeOrders) : "-",
-      desc: "当前仍在生效",
-      className: "border-cyan-300/20 bg-cyan-500/10",
+      title: "总申请数",
+      value: stats ? String(stats.totalApplications) : "-",
+      desc: "全部 Pro 申请 + 付款确认",
     },
     {
-      title: "预估收入",
-      value: stats ? formatMoney(stats.revenueCents) : "-",
-      desc: "不含已退款/已停用",
-      className: "border-orange-300/20 bg-orange-500/10",
+      title: "付款确认总数",
+      value: stats ? String(stats.paymentApplications) : "-",
+      desc: "从 checkout 提交的记录",
+    },
+    {
+      title: "今日订单数",
+      value: stats ? String(stats.todayOrders) : "-",
+      desc: "今日新增开通流水",
+    },
+    {
+      title: "今日订单金额",
+      value: stats ? formatMoney(stats.todayRevenueCents) : "-",
+      desc: "按北京时间统计",
+    },
+    {
+      title: "全部订单数",
+      value: stats ? String(stats.totalOrders) : "-",
+      desc: "全部 Pro 开通记录",
+    },
+    {
+      title: "联系反馈",
+      value: stats ? String(stats.totalMessages) : "-",
+      desc: "contact_messages 总数",
     },
   ];
 
@@ -305,12 +360,12 @@ export default function AdminHomePage() {
             <h1 className="max-w-4xl text-4xl font-black leading-tight tracking-tight md:text-6xl">
               后台控制台
               <span className="block bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
-                数据看板、申请审核和 Pro 管理
+                付款审核、订单统计和 Pro 管理
               </span>
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              这里是后台统一入口。你可以快速查看申请数量、开通记录、预估收入和最近用户动态。
+              这里是后台统一入口。你可以优先处理待审核付款确认，查看今日新增申请、当前生效 Pro 用户、订单金额和最近动态。
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -325,9 +380,9 @@ export default function AdminHomePage() {
 
               <Link
                 href="/admin/submissions"
-                className="rounded-2xl border border-purple-300/20 bg-purple-500/10 px-6 py-3 font-black text-purple-100 transition hover:bg-purple-500/20"
+                className="rounded-2xl border border-red-300/20 bg-red-500/10 px-6 py-3 font-black text-red-100 transition hover:bg-red-500/20"
               >
-                去处理申请
+                审核付款确认
               </Link>
 
               <Link
@@ -349,20 +404,36 @@ export default function AdminHomePage() {
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {statCards.map((item) => (
-            <div
+          {importantCards.map((item) => (
+            <Link
               key={item.title}
-              className={`rounded-[2rem] border p-6 ${item.className}`}
+              href={item.href}
+              className={`rounded-[2rem] border p-6 transition hover:-translate-y-1 ${item.className}`}
             >
-              <div className="text-sm font-bold text-white/50">
-                {item.title}
-              </div>
+              <div className="text-sm font-bold text-white/55">{item.title}</div>
 
               <div className="mt-3 text-4xl font-black tracking-tight">
                 {loading ? "..." : item.value}
               </div>
 
-              <div className="mt-3 text-sm text-white/50">{item.desc}</div>
+              <div className="mt-3 text-sm text-white/55">{item.desc}</div>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {secondaryCards.map((item) => (
+            <div
+              key={item.title}
+              className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6"
+            >
+              <div className="text-sm font-bold text-white/45">{item.title}</div>
+
+              <div className="mt-3 text-3xl font-black tracking-tight">
+                {loading ? "..." : item.value}
+              </div>
+
+              <div className="mt-3 text-sm text-white/45">{item.desc}</div>
             </div>
           ))}
         </div>
@@ -380,9 +451,7 @@ export default function AdminHomePage() {
 
               <h2 className="text-3xl font-black">{card.title}</h2>
 
-              <p className="mt-4 min-h-20 leading-7 text-white/60">
-                {card.desc}
-              </p>
+              <p className="mt-4 min-h-20 leading-7 text-white/60">{card.desc}</p>
 
               <div className="mt-8 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition group-hover:bg-zinc-200">
                 进入管理 →
@@ -395,31 +464,29 @@ export default function AdminHomePage() {
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-7">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-black">最近 5 条 Pro 申请</h2>
-                <p className="mt-2 text-sm text-white/50">
-                  快速查看最新提交的申请。
-                </p>
+                <h2 className="text-2xl font-black">最近付款确认</h2>
+                <p className="mt-2 text-sm text-white/50">优先核对这些记录。</p>
               </div>
 
               <Link
                 href="/admin/submissions"
                 className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/70 transition hover:bg-white/10"
               >
-                查看全部
+                去审核
               </Link>
             </div>
 
             {loading ? (
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/50">
-                正在读取最近申请...
+                正在读取付款确认...
               </div>
-            ) : recentApplications.length === 0 ? (
+            ) : recentPaymentApplications.length === 0 ? (
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/50">
-                暂时没有申请记录。
+                暂时没有付款确认记录。
               </div>
             ) : (
               <div className="space-y-3">
-                {recentApplications.map((item) => {
+                {recentPaymentApplications.map((item) => {
                   const status = getStatusInfo(item.status);
 
                   return (
@@ -429,10 +496,13 @@ export default function AdminHomePage() {
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <div className="font-black">{item.name}</div>
-                          <div className="mt-1 text-sm text-white/45">
-                            {item.email}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="font-black">{item.name}</div>
+                            <div className="rounded-full border border-emerald-300/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-black text-emerald-100">
+                              付款确认
+                            </div>
                           </div>
+                          <div className="mt-1 text-sm text-white/45">{item.email}</div>
                         </div>
 
                         <div
@@ -456,10 +526,8 @@ export default function AdminHomePage() {
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-7">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-black">最近 5 条开通记录</h2>
-                <p className="mt-2 text-sm text-white/50">
-                  快速查看最新 Pro 开通流水。
-                </p>
+                <h2 className="text-2xl font-black">最近开通记录</h2>
+                <p className="mt-2 text-sm text-white/50">快速查看最新 Pro 开通流水。</p>
               </div>
 
               <Link
@@ -490,12 +558,8 @@ export default function AdminHomePage() {
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <div className="font-black">
-                            {item.name || item.email}
-                          </div>
-                          <div className="mt-1 text-sm text-white/45">
-                            {item.email}
-                          </div>
+                          <div className="font-black">{item.name || item.email}</div>
+                          <div className="mt-1 text-sm text-white/45">{item.email}</div>
                         </div>
 
                         <div
@@ -521,38 +585,36 @@ export default function AdminHomePage() {
           </div>
         </div>
 
-        <div className="mt-10 rounded-[2rem] border border-white/10 bg-white/[0.04] p-7">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-black">快捷入口</h2>
-              <p className="mt-2 text-sm text-white/50">
-                快速查看前台页面，确认用户看到的内容是否正常。
-              </p>
+        <div className="mt-10 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-7">
+            <h2 className="text-2xl font-black">快捷入口</h2>
+            <p className="mt-2 text-sm text-white/50">
+              快速查看前台页面，确认用户看到的内容是否正常。
+            </p>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {quickLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-center font-black text-white transition hover:bg-white/10"
+                >
+                  {item.title}
+                </Link>
+              ))}
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {quickLinks.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-center font-black text-white transition hover:bg-white/10"
-              >
-                {item.title}
-              </Link>
-            ))}
-          </div>
-        </div>
+          <div className="rounded-[2rem] border border-yellow-400/20 bg-yellow-500/10 p-7">
+            <h2 className="text-2xl font-black text-yellow-100">运营提醒</h2>
 
-        <div className="mt-10 rounded-[2rem] border border-yellow-400/20 bg-yellow-500/10 p-7">
-          <h2 className="text-2xl font-black text-yellow-100">使用提醒</h2>
-
-          <div className="mt-4 space-y-2 text-sm leading-7 text-yellow-100/75">
-            <p>1. 用户申请 Pro 后，优先去「提交记录」查看。</p>
-            <p>2. 有用户 ID 的申请，可以直接点「一键开通 Pro」。</p>
-            <p>3. 没有用户 ID 的申请，可以尝试「按邮箱开通 Pro」。</p>
-            <p>4. 开通后可以去「开通记录」查看订单和到期时间。</p>
-            <p>5. 如果用户退款或违规，可以在「开通记录」里停用 Pro。</p>
+            <div className="mt-4 space-y-2 text-sm leading-7 text-yellow-100/75">
+              <p>1. 后台首页优先看「待处理付款确认」，这是最接近成交的用户。</p>
+              <p>2. 用户已付款后，进入「提交记录」核对凭证，再点一键开通 Pro。</p>
+              <p>3. 没有用户 ID 的付款记录，可以尝试按邮箱开通 Pro。</p>
+              <p>4. 开通后去「开通记录」检查订单、到期时间、状态是否正确。</p>
+              <p>5. 如果用户退款或违规，可以在「开通记录」里停用或标记退款。</p>
+            </div>
           </div>
         </div>
       </section>

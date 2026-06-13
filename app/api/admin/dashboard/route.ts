@@ -6,6 +6,8 @@ type ProApplication = {
   name: string;
   email: string;
   plan: string;
+  use_case: string;
+  message: string | null;
   status: string;
   created_at: string;
 };
@@ -28,18 +30,32 @@ type ContactMessage = {
   created_at: string;
 };
 
+function isPaymentApplication(item: ProApplication) {
+  const raw = item.message || "";
+
+  return raw.includes("【付款确认】") || item.use_case.includes("付款确认");
+}
+
+function getChinaTodayRange() {
+  const chinaNow = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const chinaDate = chinaNow.toISOString().slice(0, 10);
+
+  return {
+    start: new Date(`${chinaDate}T00:00:00+08:00`).toISOString(),
+    end: new Date(`${chinaDate}T23:59:59.999+08:00`).toISOString(),
+  };
+}
+
 export async function GET() {
   try {
     const supabase = createAdminClient();
 
-    const [
-      applicationsResult,
-      ordersResult,
-      messagesResult,
-    ] = await Promise.all([
+    const [applicationsResult, ordersResult, messagesResult] = await Promise.all([
       supabase
         .from("pro_applications")
-        .select("id, user_id, name, email, plan, status, created_at")
+        .select(
+          "id, user_id, name, email, plan, use_case, message, status, created_at"
+        )
         .order("created_at", { ascending: false })
         .limit(1000),
 
@@ -85,10 +101,31 @@ export async function GET() {
       );
     }
 
-    const applications =
-      ((applicationsResult.data || []) as ProApplication[]) || [];
+    const applications = ((applicationsResult.data || []) as ProApplication[]) || [];
     const orders = ((ordersResult.data || []) as ProOrder[]) || [];
     const messages = ((messagesResult.data || []) as ContactMessage[]) || [];
+
+    const todayRange = getChinaTodayRange();
+
+    const paymentApplications = applications.filter((item) =>
+      isPaymentApplication(item)
+    );
+
+    const pendingPaymentApplications = paymentApplications.filter(
+      (item) => item.status === "pending"
+    );
+
+    const pendingNormalApplications = applications.filter(
+      (item) => item.status === "pending" && !isPaymentApplication(item)
+    );
+
+    const todayApplications = applications.filter(
+      (item) => item.created_at >= todayRange.start && item.created_at <= todayRange.end
+    );
+
+    const todayOrders = orders.filter(
+      (item) => item.created_at >= todayRange.start && item.created_at <= todayRange.end
+    );
 
     const validRevenueOrders = orders.filter(
       (item) => item.status !== "refunded" && item.status !== "cancelled"
@@ -99,34 +136,42 @@ export async function GET() {
       0
     );
 
+    const todayRevenueCents = todayOrders
+      .filter((item) => item.status !== "refunded" && item.status !== "cancelled")
+      .reduce((sum, item) => sum + (Number(item.amount_cents) || 0), 0);
+
+    const activeProUserKeys = new Set(
+      orders
+        .filter((item) => item.status === "active")
+        .map((item) => item.user_id || item.email)
+        .filter(Boolean)
+    );
+
     return Response.json({
       success: true,
       stats: {
         totalApplications: applications.length,
-        pendingApplications: applications.filter(
-          (item) => item.status === "pending"
-        ).length,
-        approvedApplications: applications.filter(
-          (item) => item.status === "approved"
-        ).length,
-        contactedApplications: applications.filter(
-          (item) => item.status === "contacted"
-        ).length,
-        rejectedApplications: applications.filter(
-          (item) => item.status === "rejected"
-        ).length,
+        pendingApplications: applications.filter((item) => item.status === "pending").length,
+        pendingPaymentApplications: pendingPaymentApplications.length,
+        pendingNormalApplications: pendingNormalApplications.length,
+        todayApplications: todayApplications.length,
+        paymentApplications: paymentApplications.length,
+        approvedApplications: applications.filter((item) => item.status === "approved").length,
+        contactedApplications: applications.filter((item) => item.status === "contacted").length,
+        rejectedApplications: applications.filter((item) => item.status === "rejected").length,
         totalOrders: orders.length,
         activeOrders: orders.filter((item) => item.status === "active").length,
-        expiredOrders: orders.filter((item) => item.status === "expired")
-          .length,
-        refundedOrders: orders.filter((item) => item.status === "refunded")
-          .length,
-        cancelledOrders: orders.filter((item) => item.status === "cancelled")
-          .length,
+        activeProUsers: activeProUserKeys.size,
+        expiredOrders: orders.filter((item) => item.status === "expired").length,
+        refundedOrders: orders.filter((item) => item.status === "refunded").length,
+        cancelledOrders: orders.filter((item) => item.status === "cancelled").length,
+        todayOrders: todayOrders.length,
         totalMessages: messages.length,
         revenueCents,
+        todayRevenueCents,
       },
       recentApplications: applications.slice(0, 5),
+      recentPaymentApplications: paymentApplications.slice(0, 5),
       recentOrders: orders.slice(0, 5),
     });
   } catch (error) {
