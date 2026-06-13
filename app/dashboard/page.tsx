@@ -27,6 +27,29 @@ type ProOrder = {
   created_at: string;
 };
 
+type PublicSettings = {
+  customer_wechat?: string;
+  payment_notice?: string;
+  monthly_price?: string;
+  yearly_price?: string;
+  review_notice?: string;
+  site_announcement?: string;
+};
+
+type PublicSettingsResponse = {
+  success?: boolean;
+  settings?: PublicSettings;
+};
+
+const defaultSettings: Required<PublicSettings> = {
+  customer_wechat: "请填写客服微信",
+  payment_notice: "付款后请提交付款截图或填写已发客服微信。",
+  monthly_price: "¥19.9",
+  yearly_price: "¥199",
+  review_notice: "管理员确认付款后会为账号开通 Pro 权限。",
+  site_announcement: "AI Bot Pro 正在持续升级中。",
+};
+
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -74,6 +97,116 @@ function formatAmount(amountCents: number, currency: string) {
   return `${amount.toFixed(2)} ${currency}`;
 }
 
+function getExpireInfo(expiredAt: string | null, plan: PlanType) {
+  if (plan !== "pro") {
+    return {
+      label: "未开通 Pro",
+      desc: "升级后可获得更多使用次数",
+      daysLeft: null as number | null,
+      className: "border-white/10 bg-black/30 text-white/60",
+      urgent: false,
+    };
+  }
+
+  if (!expiredAt) {
+    return {
+      label: "长期有效",
+      desc: "当前没有设置到期时间",
+      daysLeft: null as number | null,
+      className: "border-emerald-300/20 bg-emerald-500/10 text-emerald-100",
+      urgent: false,
+    };
+  }
+
+  const expiredTime = new Date(expiredAt).getTime();
+
+  if (Number.isNaN(expiredTime)) {
+    return {
+      label: "到期时间异常",
+      desc: expiredAt,
+      daysLeft: null as number | null,
+      className: "border-red-300/20 bg-red-500/10 text-red-100",
+      urgent: true,
+    };
+  }
+
+  const diff = expiredTime - Date.now();
+  const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+  if (diff <= 0) {
+    return {
+      label: "Pro 已到期",
+      desc: "续费后可恢复 Pro 权限",
+      daysLeft,
+      className: "border-red-300/20 bg-red-500/10 text-red-100",
+      urgent: true,
+    };
+  }
+
+  if (daysLeft <= 3) {
+    return {
+      label: `${daysLeft} 天内到期`,
+      desc: "建议尽快续费，避免权限中断",
+      daysLeft,
+      className: "border-red-300/20 bg-red-500/10 text-red-100",
+      urgent: true,
+    };
+  }
+
+  if (daysLeft <= 7) {
+    return {
+      label: `${daysLeft} 天后到期`,
+      desc: "即将到期，可以提前续费",
+      daysLeft,
+      className: "border-yellow-300/20 bg-yellow-500/10 text-yellow-100",
+      urgent: true,
+    };
+  }
+
+  return {
+    label: `${daysLeft} 天后到期`,
+    desc: "Pro 正常生效中",
+    daysLeft,
+    className: "border-emerald-300/20 bg-emerald-500/10 text-emerald-100",
+    urgent: false,
+  };
+}
+
+function getOrderStatusInfo(status: string) {
+  if (status === "active") {
+    return {
+      label: "有效中",
+      className: "border-emerald-400/20 bg-emerald-500/10 text-emerald-200",
+    };
+  }
+
+  if (status === "expired") {
+    return {
+      label: "已过期",
+      className: "border-yellow-400/20 bg-yellow-500/10 text-yellow-200",
+    };
+  }
+
+  if (status === "refunded") {
+    return {
+      label: "已退款",
+      className: "border-red-400/20 bg-red-500/10 text-red-200",
+    };
+  }
+
+  if (status === "cancelled") {
+    return {
+      label: "已停用",
+      className: "border-zinc-400/20 bg-zinc-500/10 text-zinc-200",
+    };
+  }
+
+  return {
+    label: status || "未知",
+    className: "border-white/10 bg-white/5 text-white/60",
+  };
+}
+
 export default function DashboardPage() {
   const supabase = useMemo(() => createClient(), []);
 
@@ -82,6 +215,12 @@ export default function DashboardPage() {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [usageLoading, setUsageLoading] = useState(true);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [notice, setNotice] = useState("");
+  const [copyError, setCopyError] = useState("");
+
+  const [settings, setSettings] =
+    useState<Required<PublicSettings>>(defaultSettings);
 
   const [userPlan, setUserPlan] = useState<UserPlanState>({
     plan: "free",
@@ -96,6 +235,46 @@ export default function DashboardPage() {
   const remainingCount = Math.max(dailyLimit - usedCount, 0);
   const usagePercent =
     dailyLimit > 0 ? Math.min((usedCount / dailyLimit) * 100, 100) : 0;
+
+  const expireInfo = getExpireInfo(userPlan.expiredAt, userPlan.plan);
+  const latestOrder = orders[0];
+
+  const activeOrderCount = orders.filter((order) => order.status === "active").length;
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSettings() {
+      try {
+        const res = await fetch("/api/settings", {
+          cache: "no-store",
+        });
+
+        const data = (await res.json()) as PublicSettingsResponse;
+
+        if (!mounted) return;
+
+        if (data.settings) {
+          setSettings({
+            ...defaultSettings,
+            ...data.settings,
+          });
+        }
+      } catch (error) {
+        console.error("读取站点配置失败：", error);
+      } finally {
+        if (mounted) {
+          setSettingsLoading(false);
+        }
+      }
+    }
+
+    loadSettings();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -258,6 +437,17 @@ export default function DashboardPage() {
     }
   }
 
+  async function copyText(value: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setNotice(`${label}已复制。`);
+      setCopyError("");
+    } catch {
+      setCopyError(`复制${label}失败，请手动选中复制。`);
+      setNotice("");
+    }
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
@@ -291,7 +481,7 @@ export default function DashboardPage() {
                 套餐价格
               </Link>
               <Link href="/checkout" className="hover:text-white">
-                升级 Pro
+                升级 / 续费 Pro
               </Link>
               <Link href="/contact" className="hover:text-white">
                 联系我们
@@ -312,29 +502,124 @@ export default function DashboardPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              在这里可以查看账号信息、当前套餐、今日 AI 使用次数、剩余次数和 Pro 开通记录，也可以直接升级、续费或提交付款确认。
+              在这里可以查看账号信息、当前套餐、今日 AI 使用次数、剩余次数、Pro 到期倒计时和开通记录，也可以直接续费。
             </p>
+
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              <div className="rounded-3xl border border-white/10 bg-black/30 p-5">
+                <div className="text-sm text-white/45">当前套餐</div>
+                <div className="mt-2 text-3xl font-black">
+                  {getPlanName(userPlan.plan)}
+                </div>
+                <div className="mt-2 text-sm text-white/45">
+                  每日 {dailyLimit} 次
+                </div>
+              </div>
+
+              <div className={`rounded-3xl border p-5 ${expireInfo.className}`}>
+                <div className="text-sm opacity-70">到期倒计时</div>
+                <div className="mt-2 text-3xl font-black">
+                  {expireInfo.label}
+                </div>
+                <div className="mt-2 text-sm opacity-70">
+                  {expireInfo.desc}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-emerald-300/20 bg-emerald-500/10 p-5">
+                <div className="text-sm text-emerald-100/60">今日剩余</div>
+                <div className="mt-2 text-3xl font-black text-emerald-100">
+                  {usageLoading ? "..." : remainingCount}
+                </div>
+                <div className="mt-2 text-sm text-emerald-100/60">
+                  已用 {usageLoading ? "..." : usedCount} 次
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-6 px-6 py-10 md:px-8 lg:grid-cols-[1fr_0.8fr] lg:px-10">
         <div className="space-y-6">
+          {notice ? (
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-emerald-200">
+              {notice}
+            </div>
+          ) : null}
+
+          {copyError ? (
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-5 text-red-200">
+              {copyError}
+            </div>
+          ) : null}
+
+          {expireInfo.urgent ? (
+            <div className="rounded-[2rem] border border-yellow-400/20 bg-yellow-500/10 p-6">
+              <div className="mb-3 inline-flex rounded-full border border-yellow-300/20 bg-yellow-500/10 px-3 py-1 text-xs font-black text-yellow-100">
+                到期提醒
+              </div>
+
+              <h2 className="text-2xl font-black text-yellow-100">
+                {expireInfo.label}
+              </h2>
+
+              <p className="mt-3 text-sm leading-7 text-yellow-100/75">
+                {expireInfo.desc}。你可以直接进入付款确认页续费，上传付款截图后等待管理员审核。
+              </p>
+
+              <Link
+                href="/checkout"
+                className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200"
+              >
+                立即续费 Pro
+              </Link>
+            </div>
+          ) : null}
+
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
             <h2 className="text-2xl font-black">账号信息</h2>
 
             <div className="mt-6 space-y-4">
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-                <div className="text-sm text-white/45">登录邮箱</div>
-                <div className="mt-2 break-all text-lg font-black">
-                  {user?.email || "未获取到邮箱"}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm text-white/45">登录邮箱</div>
+                    <div className="mt-2 break-all text-lg font-black">
+                      {user?.email || "未获取到邮箱"}
+                    </div>
+                  </div>
+
+                  {user?.email ? (
+                    <button
+                      type="button"
+                      onClick={() => copyText(user.email || "", "邮箱")}
+                      className="rounded-full border border-white/10 bg-white px-4 py-2 text-xs font-black text-black transition hover:bg-zinc-200"
+                    >
+                      复制邮箱
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-                <div className="text-sm text-white/45">用户 ID</div>
-                <div className="mt-2 break-all text-sm font-bold text-white/70">
-                  {user?.id || "未获取到用户 ID"}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm text-white/45">用户 ID</div>
+                    <div className="mt-2 break-all text-sm font-bold text-white/70">
+                      {user?.id || "未获取到用户 ID"}
+                    </div>
+                  </div>
+
+                  {user?.id ? (
+                    <button
+                      type="button"
+                      onClick={() => copyText(user.id || "", "用户 ID")}
+                      className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white/70 transition hover:bg-white/10"
+                    >
+                      复制用户 ID
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
@@ -364,9 +649,14 @@ export default function DashboardPage() {
                 </p>
 
                 {userPlan.expiredAt && userPlan.plan === "pro" && (
-                  <p className="mt-2 text-xs text-white/45">
-                    到期时间：{formatTime(userPlan.expiredAt)}
-                  </p>
+                  <div className={`mt-4 rounded-2xl border p-4 ${expireInfo.className}`}>
+                    <div className="text-sm font-black">
+                      到期时间：{formatTime(userPlan.expiredAt)}
+                    </div>
+                    <div className="mt-1 text-xs opacity-70">
+                      {expireInfo.desc}
+                    </div>
+                  </div>
                 )}
 
                 <div className="mt-5 flex flex-wrap gap-3">
@@ -387,6 +677,13 @@ export default function DashboardPage() {
                   >
                     查看套餐
                   </Link>
+
+                  <Link
+                    href="/checkout"
+                    className="rounded-2xl border border-emerald-300/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-500/20"
+                  >
+                    上传付款截图续费
+                  </Link>
                 </div>
               </div>
             </div>
@@ -394,12 +691,30 @@ export default function DashboardPage() {
 
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-              <h2 className="text-2xl font-black">我的 Pro 开通记录</h2>
+              <div>
+                <h2 className="text-2xl font-black">我的 Pro 开通记录</h2>
+                <p className="mt-2 text-sm text-white/45">
+                  最近开通、续费、退款或停用记录都会显示在这里。
+                </p>
+              </div>
 
               <div className="rounded-full border border-emerald-300/20 bg-emerald-500/10 px-3 py-1 text-sm font-bold text-emerald-100">
                 {orders.length} 条
               </div>
             </div>
+
+            {latestOrder ? (
+              <div className="mb-5 rounded-3xl border border-purple-300/20 bg-purple-500/10 p-5">
+                <div className="mb-2 text-sm font-black text-purple-100">
+                  最近一次开通记录
+                </div>
+                <div className="text-2xl font-black">{latestOrder.plan_name}</div>
+                <div className="mt-2 text-sm text-purple-100/70">
+                  {formatAmount(latestOrder.amount_cents, latestOrder.currency)} ·{" "}
+                  {formatTime(latestOrder.created_at)}
+                </div>
+              </div>
+            ) : null}
 
             {ordersLoading ? (
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/50">
@@ -411,60 +726,91 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {orders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="rounded-3xl border border-white/10 bg-black/30 p-5"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <div className="text-xl font-black">
-                          {order.plan_name}
+                {orders.map((order) => {
+                  const statusInfo = getOrderStatusInfo(order.status);
+                  const orderExpireInfo = getExpireInfo(
+                    order.expired_at,
+                    order.status === "active" ? "pro" : "free"
+                  );
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="rounded-3xl border border-white/10 bg-black/30 p-5"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="text-xl font-black">
+                            {order.plan_name}
+                          </div>
+
+                          <div className="mt-1 text-sm text-white/50">
+                            {formatAmount(order.amount_cents, order.currency)}
+                          </div>
                         </div>
 
-                        <div className="mt-1 text-sm text-white/50">
-                          {formatAmount(order.amount_cents, order.currency)}
+                        <div className="flex flex-wrap gap-2">
+                          <div
+                            className={`rounded-full border px-3 py-1 text-xs font-bold ${statusInfo.className}`}
+                          >
+                            {statusInfo.label}
+                          </div>
+
+                          {order.email_sent ? (
+                            <div className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-200">
+                              邮件已发
+                            </div>
+                          ) : (
+                            <div className="rounded-full border border-yellow-400/20 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-200">
+                              邮件未发
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      <div
-                        className={
-                          order.status === "active"
-                            ? "rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-200"
-                            : "rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/60"
-                        }
-                      >
-                        {order.status === "active" ? "有效中" : order.status}
+                      <div className="mt-4 grid gap-3 text-sm text-white/70 md:grid-cols-2">
+                        <div>
+                          <span className="text-white/40">每日额度：</span>
+                          {order.daily_limit} 次
+                        </div>
+
+                        <div>
+                          <span className="text-white/40">开通时间：</span>
+                          {formatTime(order.created_at)}
+                        </div>
+
+                        <div>
+                          <span className="text-white/40">到期时间：</span>
+                          {formatTime(order.expired_at)}
+                        </div>
+
+                        <div>
+                          <span className="text-white/40">到期提醒：</span>
+                          <span className={orderExpireInfo.urgent ? "text-yellow-200" : "text-emerald-200"}>
+                            {orderExpireInfo.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Link
+                          href="/checkout"
+                          className="rounded-full border border-purple-300/20 bg-purple-500/10 px-4 py-2 text-xs font-bold text-purple-100 transition hover:bg-purple-500/20"
+                        >
+                          续费同类套餐
+                        </Link>
+
+                        <button
+                          type="button"
+                          onClick={() => copyText(order.id, "订单 ID")}
+                          className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white/70 transition hover:bg-white/10"
+                        >
+                          复制订单 ID
+                        </button>
                       </div>
                     </div>
-
-                    <div className="mt-4 grid gap-3 text-sm text-white/70 md:grid-cols-2">
-                      <div>
-                        <span className="text-white/40">每日额度：</span>
-                        {order.daily_limit} 次
-                      </div>
-
-                      <div>
-                        <span className="text-white/40">邮件通知：</span>
-                        {order.email_sent ? (
-                          <span className="text-emerald-200">已发送</span>
-                        ) : (
-                          <span className="text-yellow-200">未发送</span>
-                        )}
-                      </div>
-
-                      <div>
-                        <span className="text-white/40">开通时间：</span>
-                        {formatTime(order.created_at)}
-                      </div>
-
-                      <div>
-                        <span className="text-white/40">到期时间：</span>
-                        {formatTime(order.expired_at)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -512,6 +858,71 @@ export default function DashboardPage() {
                 </p>
               </div>
             )}
+          </div>
+
+          <div className="rounded-[2rem] border border-emerald-300/20 bg-emerald-500/10 p-6">
+            <h2 className="text-2xl font-black text-emerald-100">
+              升级 / 续费 Pro
+            </h2>
+
+            <p className="mt-3 text-sm leading-7 text-emerald-100/75">
+              当前 Pro 月卡价格：{settings.monthly_price}，年卡价格：
+              {settings.yearly_price}。付款后上传截图，管理员审核后会为你开通或续费。
+            </p>
+
+            <div className="mt-5 grid gap-3">
+              <Link
+                href="/checkout"
+                className="rounded-2xl bg-white px-5 py-4 text-center font-black text-black transition hover:bg-zinc-200"
+              >
+                去付款确认 / 上传截图
+              </Link>
+
+              <Link
+                href="/pricing"
+                className="rounded-2xl border border-emerald-300/20 bg-emerald-500/10 px-5 py-4 text-center font-black text-emerald-100 transition hover:bg-emerald-500/20"
+              >
+                查看套餐价格
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-purple-300/20 bg-purple-500/10 p-6">
+            <h2 className="text-2xl font-black text-purple-100">联系客服</h2>
+
+            <div className="mt-4 space-y-3 text-sm leading-7 text-purple-100/75">
+              <p>
+                {settingsLoading
+                  ? "正在读取客服信息..."
+                  : "如果付款后长时间未开通，可以联系管理员处理。"}
+              </p>
+
+              <p>
+                客服微信：
+                <span className="ml-1 font-black text-white">
+                  {settings.customer_wechat}
+                </span>
+              </p>
+
+              <p>{settings.review_notice}</p>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => copyText(settings.customer_wechat, "客服微信")}
+                className="rounded-2xl border border-purple-300/20 bg-purple-500/10 px-5 py-3 text-sm font-black text-purple-100 transition hover:bg-purple-500/20"
+              >
+                复制客服微信
+              </button>
+
+              <Link
+                href="/contact"
+                className="rounded-2xl border border-white/10 bg-black/30 px-5 py-3 text-sm font-bold text-white/80 transition hover:border-white/30"
+              >
+                联系我们
+              </Link>
+            </div>
           </div>
 
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
