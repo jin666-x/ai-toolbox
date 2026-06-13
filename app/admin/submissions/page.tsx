@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type ApplicationStatus = "pending" | "contacted" | "approved" | "rejected";
+
 type ProApplication = {
   id: string;
   name: string;
@@ -11,7 +13,7 @@ type ProApplication = {
   plan: string;
   use_case: string;
   message: string | null;
-  status: string;
+  status: ApplicationStatus;
   created_at: string;
   updated_at: string;
 };
@@ -31,6 +33,37 @@ type SubmissionsResponse = {
   error?: string;
 };
 
+type UpdateStatusResponse = {
+  success: boolean;
+  application?: ProApplication;
+  error?: string;
+};
+
+const statusMap: Record<
+  ApplicationStatus,
+  {
+    label: string;
+    className: string;
+  }
+> = {
+  pending: {
+    label: "待处理",
+    className: "border-yellow-400/20 bg-yellow-400/10 text-yellow-200",
+  },
+  contacted: {
+    label: "已联系",
+    className: "border-blue-400/20 bg-blue-400/10 text-blue-200",
+  },
+  approved: {
+    label: "已开通",
+    className: "border-emerald-400/20 bg-emerald-400/10 text-emerald-200",
+  },
+  rejected: {
+    label: "已拒绝",
+    className: "border-red-400/20 bg-red-400/10 text-red-200",
+  },
+};
+
 function formatTime(value: string) {
   try {
     return new Date(value).toLocaleString("zh-CN", {
@@ -46,6 +79,7 @@ export default function AdminSubmissionsPage() {
   const [applications, setApplications] = useState<ProApplication[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState("");
   const [error, setError] = useState("");
 
   async function loadData() {
@@ -76,6 +110,54 @@ export default function AdminSubmissionsPage() {
       setError(err instanceof Error ? err.message : "读取失败，请稍后再试。");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function updateApplicationStatus(
+    applicationId: string,
+    status: ApplicationStatus
+  ) {
+    if (updatingId) return;
+
+    setUpdatingId(applicationId);
+    setError("");
+
+    try {
+      const res = await fetch("/api/admin/applications/status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          applicationId,
+          status,
+        }),
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("后台接口返回异常，请重新通过 admin_key 进入后台。");
+      }
+
+      const data = (await res.json()) as UpdateStatusResponse;
+
+      if (!res.ok) {
+        throw new Error(data.error || "更新失败");
+      }
+
+      if (data.application) {
+        setApplications((prev) =>
+          prev.map((item) =>
+            item.id === data.application?.id ? data.application : item
+          )
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "更新失败，请稍后再试。");
+    } finally {
+      setUpdatingId("");
     }
   }
 
@@ -195,51 +277,110 @@ export default function AdminSubmissionsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {applications.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-3xl border border-white/10 bg-black/30 p-5"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <div className="text-xl font-black">{item.name}</div>
-                        <div className="mt-1 text-sm text-white/50">
-                          {item.email}
+                {applications.map((item) => {
+                  const currentStatus = statusMap[item.status] || statusMap.pending;
+                  const isUpdating = updatingId === item.id;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-3xl border border-white/10 bg-black/30 p-5"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="text-xl font-black">{item.name}</div>
+                          <div className="mt-1 text-sm text-white/50">
+                            {item.email}
+                          </div>
+                        </div>
+
+                        <div
+                          className={`rounded-full border px-3 py-1 text-xs font-bold ${currentStatus.className}`}
+                        >
+                          {currentStatus.label}
                         </div>
                       </div>
 
-                      <div className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-bold text-yellow-200">
-                        {item.status || "pending"}
+                      <div className="mt-4 grid gap-3 text-sm text-white/70 md:grid-cols-2">
+                        <div>
+                          <span className="text-white/40">套餐：</span>
+                          {item.plan}
+                        </div>
+
+                        <div>
+                          <span className="text-white/40">场景：</span>
+                          {item.use_case}
+                        </div>
+
+                        <div>
+                          <span className="text-white/40">微信/公司：</span>
+                          {item.company || "未填写"}
+                        </div>
+
+                        <div>
+                          <span className="text-white/40">时间：</span>
+                          {formatTime(item.created_at)}
+                        </div>
                       </div>
+
+                      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-7 text-white/65">
+                        {item.message || "未填写补充说明"}
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={isUpdating || item.status === "contacted"}
+                          onClick={() =>
+                            updateApplicationStatus(item.id, "contacted")
+                          }
+                          className="rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold text-blue-200 transition hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          标记已联系
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isUpdating || item.status === "approved"}
+                          onClick={() =>
+                            updateApplicationStatus(item.id, "approved")
+                          }
+                          className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          标记已开通
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isUpdating || item.status === "rejected"}
+                          onClick={() =>
+                            updateApplicationStatus(item.id, "rejected")
+                          }
+                          className="rounded-full border border-red-400/20 bg-red-500/10 px-4 py-2 text-xs font-bold text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          标记已拒绝
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isUpdating || item.status === "pending"}
+                          onClick={() =>
+                            updateApplicationStatus(item.id, "pending")
+                          }
+                          className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white/70 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          重新待处理
+                        </button>
+                      </div>
+
+                      {isUpdating ? (
+                        <div className="mt-3 text-xs text-white/40">
+                          正在更新状态...
+                        </div>
+                      ) : null}
                     </div>
-
-                    <div className="mt-4 grid gap-3 text-sm text-white/70 md:grid-cols-2">
-                      <div>
-                        <span className="text-white/40">套餐：</span>
-                        {item.plan}
-                      </div>
-
-                      <div>
-                        <span className="text-white/40">场景：</span>
-                        {item.use_case}
-                      </div>
-
-                      <div>
-                        <span className="text-white/40">微信/公司：</span>
-                        {item.company || "未填写"}
-                      </div>
-
-                      <div>
-                        <span className="text-white/40">时间：</span>
-                        {formatTime(item.created_at)}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-7 text-white/65">
-                      {item.message || "未填写补充说明"}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
