@@ -81,6 +81,7 @@ const tools = [
 
 const ANONYMOUS_DAILY_LIMIT = 5;
 const FREE_DAILY_LIMIT = 10;
+const PRO_DAILY_LIMIT = 100;
 const MAX_MESSAGE_LENGTH = 2000;
 const USAGE_KEY = "ai_bot_pro_daily_usage";
 
@@ -114,6 +115,30 @@ function getTodayDate() {
 
 function getPlanName(plan: PlanType) {
   return plan === "pro" ? "Pro 会员版" : "Free 免费版";
+}
+
+function getLimitTitle(isLoggedIn: boolean, plan: PlanType) {
+  if (!isLoggedIn) {
+    return "今日免费体验次数已用完";
+  }
+
+  if (plan === "pro") {
+    return "今日 Pro 额度已用完";
+  }
+
+  return "今日 Free 额度已用完";
+}
+
+function getLimitDescription(isLoggedIn: boolean, plan: PlanType, usageLimit: number) {
+  if (!isLoggedIn) {
+    return `未登录用户每日可体验 ${ANONYMOUS_DAILY_LIMIT} 次。登录账号后每日可使用 ${FREE_DAILY_LIMIT} 次，升级 Pro 后每日可使用 ${PRO_DAILY_LIMIT} 次。`;
+  }
+
+  if (plan === "pro") {
+    return `你当前是 Pro 会员，每日可使用 ${usageLimit} 次。今日额度已用完，明天会自动恢复。`;
+  }
+
+  return `你当前是 Free 免费版，每日可使用 ${usageLimit} 次。升级 Pro 后每日可使用 ${PRO_DAILY_LIMIT} 次，更适合高频创作、办公和运营。`;
 }
 
 function getUsage() {
@@ -514,6 +539,7 @@ export default function ChatPage() {
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [limitNotice, setLimitNotice] = useState("");
   const [usageCount, setUsageCount] = useState(0);
   const [usageLimit, setUsageLimit] = useState(ANONYMOUS_DAILY_LIMIT);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -526,6 +552,7 @@ export default function ChatPage() {
   const remainingCount = Math.max(usageLimit - usageCount, 0);
   const messageLength = message.length;
   const isMessageTooLong = messageLength > MAX_MESSAGE_LENGTH;
+  const shouldShowLimitCard = remainingCount <= 0 || Boolean(limitNotice);
 
   async function loadLoginUsage(userId: string) {
     const today = getTodayDate();
@@ -617,6 +644,12 @@ export default function ChatPage() {
 
       setUsageCount(safeUsed);
 
+      if (safeUsed >= safeLimit) {
+        setLimitNotice("今日额度已用完，可以升级 Pro 获得更高每日使用次数。");
+      } else {
+        setLimitNotice("");
+      }
+
       if (backendType === "anonymous") {
         saveUsage(safeUsed);
       }
@@ -659,6 +692,7 @@ export default function ChatPage() {
         setMessage("");
         setReply("");
         setError("");
+        setLimitNotice("");
       }
     }
 
@@ -701,6 +735,7 @@ export default function ChatPage() {
     setLoading(true);
     setReply("");
     setError("");
+    setLimitNotice("");
 
     try {
       const {
@@ -713,11 +748,14 @@ export default function ChatPage() {
       const currentUsage = loggedIn ? usageCount : getUsage();
 
       if (currentUsage >= usageLimit) {
-        setError(
-          loggedIn
-            ? "你今天的账号次数已经用完，请明天再来。"
-            : "今日免费次数已用完，请登录账号或明天再来。"
-        );
+        const limitText = loggedIn
+          ? userPlan.plan === "pro"
+            ? "你今天的 Pro 额度已用完，明天会自动恢复。"
+            : "你今天的 Free 额度已用完，升级 Pro 后每日可使用 100 次。"
+          : "今日免费体验次数已用完，登录账号可获得每日 10 次，升级 Pro 后每日 100 次。";
+
+        setLimitNotice(limitText);
+        setError("");
         setUsageCount(currentUsage);
         setLoading(false);
         return;
@@ -761,12 +799,30 @@ export default function ChatPage() {
 
         setUsageCount(newUsage);
 
+        if (newUsage >= usageLimit) {
+          setLimitNotice("今日额度已用完，可以升级 Pro 获得更高每日使用次数。");
+        }
+
         if (backendType === "anonymous" || !loggedIn) {
           saveUsage(newUsage);
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "请求失败，请稍后重试。");
+      const errorMessage =
+        err instanceof Error ? err.message : "请求失败，请稍后重试。";
+
+      const lowerError = errorMessage.toLowerCase();
+      const isLimitError =
+        errorMessage.includes("次数") ||
+        errorMessage.includes("额度") ||
+        lowerError.includes("limit");
+
+      if (isLimitError) {
+        setLimitNotice(errorMessage);
+        setError("");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -777,6 +833,7 @@ export default function ChatPage() {
     setMessage("");
     setReply("");
     setError("");
+    setLimitNotice("");
 
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -882,9 +939,9 @@ export default function ChatPage() {
 
                 <Link
                   href="/waitlist"
-                  className="flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/10"
+                  className="flex w-full items-center justify-center rounded-xl border border-purple-300/30 bg-purple-500/20 px-3 py-2 text-xs font-black text-purple-100 transition hover:bg-purple-500/30"
                 >
-                  加入等待名单
+                  申请 Pro
                 </Link>
 
                 <Link
@@ -892,13 +949,6 @@ export default function ChatPage() {
                   className="flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/10"
                 >
                   会员中心
-                </Link>
-
-                <Link
-                  href="/contact"
-                  className="flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/10"
-                >
-                  联系我们
                 </Link>
 
                 <Link
@@ -940,9 +990,9 @@ export default function ChatPage() {
 
               <Link
                 href="/waitlist"
-                className="inline-flex rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-zinc-300 transition hover:bg-white/10 hover:text-white"
+                className="inline-flex rounded-full border border-purple-300/30 bg-purple-500/20 px-4 py-2 text-sm font-bold text-purple-100 transition hover:bg-purple-500/30"
               >
-                等待名单
+                申请 Pro
               </Link>
 
               <Link
@@ -950,13 +1000,6 @@ export default function ChatPage() {
                 className="inline-flex rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-zinc-300 transition hover:bg-white/10 hover:text-white"
               >
                 会员中心
-              </Link>
-
-              <Link
-                href="/contact"
-                className="inline-flex rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-zinc-300 transition hover:bg-white/10 hover:text-white"
-              >
-                联系我们
               </Link>
 
               <Link
@@ -1010,7 +1053,7 @@ export default function ChatPage() {
                     ? userPlan.plan === "pro"
                       ? "Pro 会员剩余次数"
                       : "Free 账号剩余次数"
-                    : "今日剩余免费次数"}
+                    : "今日免费体验剩余次数"}
                   ：{remainingCount} / {usageLimit}
                 </p>
 
@@ -1044,43 +1087,73 @@ export default function ChatPage() {
             )}
           </div>
 
-          {remainingCount <= 0 && !error && (
-            <div className="mt-5 rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-5 text-yellow-300">
-              <div className="font-bold">
-                {isLoggedIn ? "今日账号次数已用完" : "今日免费次数已用完"}
+          {shouldShowLimitCard && (
+            <div className="mt-5 rounded-3xl border border-purple-300/25 bg-purple-500/10 p-6 text-purple-100 shadow-2xl shadow-purple-500/10">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="text-2xl font-black">
+                    {getLimitTitle(isLoggedIn, userPlan.plan)}
+                  </div>
+
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-purple-100/80">
+                    {limitNotice ||
+                      getLimitDescription(
+                        isLoggedIn,
+                        userPlan.plan,
+                        usageLimit
+                      )}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-purple-300/20 bg-black/30 px-5 py-3 text-right">
+                  <div className="text-xs text-purple-100/60">Pro 每日额度</div>
+                  <div className="mt-1 text-2xl font-black">100 次/天</div>
+                </div>
               </div>
 
-              <p className="mt-2 text-sm text-yellow-200/80">
-                当前每日可使用 {usageLimit} 次，明天会自动恢复。后续可升级
-                Pro 套餐获得更多次数。
-              </p>
+              <div className="mt-5 grid gap-3 text-sm text-purple-100/80 md:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="font-black text-white">Free 免费版</div>
+                  <div className="mt-1">登录后每日 10 次</div>
+                </div>
 
-              <div className="mt-4 flex flex-wrap gap-3">
-                <Link
-                  href="/pricing"
-                  className="inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200"
-                >
-                  查看套餐价格
-                </Link>
+                <div className="rounded-2xl border border-purple-300/20 bg-purple-500/10 p-4">
+                  <div className="font-black text-white">Pro 月卡</div>
+                  <div className="mt-1">￥19.9 / 月，每日 100 次</div>
+                </div>
 
+                <div className="rounded-2xl border border-purple-300/20 bg-purple-500/10 p-4">
+                  <div className="font-black text-white">Pro 年卡</div>
+                  <div className="mt-1">￥199 / 年，每日 100 次</div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-3">
                 <Link
                   href="/waitlist"
-                  className="inline-flex rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-5 py-3 text-sm font-black text-yellow-100 transition hover:bg-yellow-400/20"
+                  className="inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200"
                 >
-                  加入等待名单
+                  升级 Pro
                 </Link>
 
                 <Link
-                  href="/contact"
-                  className="inline-flex rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-5 py-3 text-sm font-black text-yellow-100 transition hover:bg-yellow-400/20"
+                  href="/pricing"
+                  className="inline-flex rounded-2xl border border-purple-300/20 bg-purple-500/10 px-5 py-3 text-sm font-black text-purple-100 transition hover:bg-purple-500/20"
                 >
-                  联系我们
+                  查看套餐
+                </Link>
+
+                <Link
+                  href="/dashboard"
+                  className="inline-flex rounded-2xl border border-purple-300/20 bg-purple-500/10 px-5 py-3 text-sm font-black text-purple-100 transition hover:bg-purple-500/20"
+                >
+                  返回会员中心
                 </Link>
 
                 {!isLoggedIn && (
                   <Link
                     href="/login"
-                    className="inline-flex rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-5 py-3 text-sm font-black text-yellow-100 transition hover:bg-yellow-400/20"
+                    className="inline-flex rounded-2xl border border-purple-300/20 bg-purple-500/10 px-5 py-3 text-sm font-black text-purple-100 transition hover:bg-purple-500/20"
                   >
                     登录账号
                   </Link>
