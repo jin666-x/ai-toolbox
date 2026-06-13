@@ -15,6 +15,18 @@ type UserPlanState = {
   expiredAt: string | null;
 };
 
+type ProOrder = {
+  id: string;
+  plan_name: string;
+  amount_cents: number;
+  currency: string;
+  daily_limit: number;
+  expired_at: string | null;
+  status: string;
+  email_sent: boolean;
+  created_at: string;
+};
+
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -35,6 +47,33 @@ function getPlanDesc(plan: PlanType, dailyLimit: number) {
   return `当前账号为 Free 免费版，每日可使用 ${dailyLimit} 次 AI 工具。`;
 }
 
+function formatTime(value: string | null) {
+  if (!value) return "未设置";
+
+  try {
+    return new Date(value).toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      hour12: false,
+    });
+  } catch {
+    return value;
+  }
+}
+
+function formatAmount(amountCents: number, currency: string) {
+  const amount = amountCents / 100;
+
+  if (amountCents <= 0) {
+    return "￥0 / 试用或手动开通";
+  }
+
+  if (currency === "CNY") {
+    return `￥${amount.toFixed(2)}`;
+  }
+
+  return `${amount.toFixed(2)} ${currency}`;
+}
+
 export default function DashboardPage() {
   const supabase = useMemo(() => createClient(), []);
 
@@ -42,6 +81,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [usageLoading, setUsageLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
 
   const [userPlan, setUserPlan] = useState<UserPlanState>({
     plan: "free",
@@ -50,6 +90,7 @@ export default function DashboardPage() {
   });
 
   const [usedCount, setUsedCount] = useState(0);
+  const [orders, setOrders] = useState<ProOrder[]>([]);
 
   const dailyLimit = userPlan.dailyLimit;
   const remainingCount = Math.max(dailyLimit - usedCount, 0);
@@ -62,6 +103,7 @@ export default function DashboardPage() {
     async function loadDashboard() {
       setLoading(true);
       setUsageLoading(true);
+      setOrdersLoading(true);
 
       const {
         data: { session },
@@ -73,6 +115,7 @@ export default function DashboardPage() {
         setUser(null);
         setLoading(false);
         setUsageLoading(false);
+        setOrdersLoading(false);
         window.location.replace("/login");
         return;
       }
@@ -99,7 +142,9 @@ export default function DashboardPage() {
       } else if (planData) {
         const dbPlan = planData.plan === "pro" ? "pro" : "free";
         const dbDailyLimit = Number(planData.daily_limit || FREE_DAILY_LIMIT);
-        const expiredAt = planData.expired_at ? String(planData.expired_at) : null;
+        const expiredAt = planData.expired_at
+          ? String(planData.expired_at)
+          : null;
 
         const isExpired = expiredAt
           ? new Date(expiredAt).getTime() <= Date.now()
@@ -138,6 +183,26 @@ export default function DashboardPage() {
       }
 
       setUsageLoading(false);
+
+      const { data: orderData, error: orderError } = await supabase
+        .from("pro_orders")
+        .select(
+          "id, plan_name, amount_cents, currency, daily_limit, expired_at, status, email_sent, created_at"
+        )
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (!mounted) return;
+
+      if (orderError) {
+        console.error("读取 Pro 开通记录失败：", orderError);
+        setOrders([]);
+      } else {
+        setOrders((orderData || []) as ProOrder[]);
+      }
+
+      setOrdersLoading(false);
     }
 
     loadDashboard();
@@ -226,7 +291,7 @@ export default function DashboardPage() {
                 套餐价格
               </Link>
               <Link href="/waitlist" className="hover:text-white">
-                等待名单
+                申请 Pro
               </Link>
               <Link href="/contact" className="hover:text-white">
                 联系我们
@@ -247,62 +312,141 @@ export default function DashboardPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              在这里可以查看账号信息、当前套餐、今日 AI 使用次数和剩余次数。
+              在这里可以查看账号信息、当前套餐、今日 AI 使用次数、剩余次数和 Pro 开通记录。
             </p>
           </div>
         </div>
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-6 px-6 py-10 md:px-8 lg:grid-cols-[1fr_0.8fr] lg:px-10">
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
-          <h2 className="text-2xl font-black">账号信息</h2>
+        <div className="space-y-6">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+            <h2 className="text-2xl font-black">账号信息</h2>
 
-          <div className="mt-6 space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-              <div className="text-sm text-white/45">登录邮箱</div>
-              <div className="mt-2 break-all text-lg font-black">
-                {user?.email || "未获取到邮箱"}
+            <div className="mt-6 space-y-4">
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                <div className="text-sm text-white/45">登录邮箱</div>
+                <div className="mt-2 break-all text-lg font-black">
+                  {user?.email || "未获取到邮箱"}
+                </div>
               </div>
-            </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-              <div className="text-sm text-white/45">用户 ID</div>
-              <div className="mt-2 break-all text-sm font-bold text-white/70">
-                {user?.id || "未获取到用户 ID"}
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                <div className="text-sm text-white/45">用户 ID</div>
+                <div className="mt-2 break-all text-sm font-bold text-white/70">
+                  {user?.id || "未获取到用户 ID"}
+                </div>
               </div>
-            </div>
 
-            <div
-              className={`rounded-2xl border p-5 ${
-                userPlan.plan === "pro"
-                  ? "border-purple-400/30 bg-purple-500/10"
-                  : "border-white/10 bg-black/30"
-              }`}
-            >
-              <div className="text-sm text-white/45">当前套餐</div>
+              <div
+                className={`rounded-2xl border p-5 ${
+                  userPlan.plan === "pro"
+                    ? "border-purple-400/30 bg-purple-500/10"
+                    : "border-white/10 bg-black/30"
+                }`}
+              >
+                <div className="text-sm text-white/45">当前套餐</div>
 
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <div className="text-2xl font-black">
-                  {getPlanName(userPlan.plan)}
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <div className="text-2xl font-black">
+                    {getPlanName(userPlan.plan)}
+                  </div>
+
+                  {userPlan.plan === "pro" && (
+                    <div className="rounded-full border border-purple-300/30 bg-purple-400/10 px-3 py-1 text-xs font-black text-purple-200">
+                      PRO
+                    </div>
+                  )}
                 </div>
 
-                {userPlan.plan === "pro" && (
-                  <div className="rounded-full border border-purple-300/30 bg-purple-400/10 px-3 py-1 text-xs font-black text-purple-200">
-                    PRO
-                  </div>
+                <p className="mt-2 text-sm leading-6 text-white/55">
+                  {getPlanDesc(userPlan.plan, dailyLimit)}
+                </p>
+
+                {userPlan.expiredAt && userPlan.plan === "pro" && (
+                  <p className="mt-2 text-xs text-white/45">
+                    到期时间：{formatTime(userPlan.expiredAt)}
+                  </p>
                 )}
               </div>
-
-              <p className="mt-2 text-sm leading-6 text-white/55">
-                {getPlanDesc(userPlan.plan, dailyLimit)}
-              </p>
-
-              {userPlan.expiredAt && userPlan.plan === "pro" && (
-                <p className="mt-2 text-xs text-white/45">
-                  到期时间：{new Date(userPlan.expiredAt).toLocaleString("zh-CN")}
-                </p>
-              )}
             </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-2xl font-black">我的 Pro 开通记录</h2>
+
+              <div className="rounded-full border border-emerald-300/20 bg-emerald-500/10 px-3 py-1 text-sm font-bold text-emerald-100">
+                {orders.length} 条
+              </div>
+            </div>
+
+            {ordersLoading ? (
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/50">
+                正在读取开通记录...
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/50">
+                暂时没有 Pro 开通记录。开通 Pro 后，这里会显示套餐和到期时间。
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="rounded-3xl border border-white/10 bg-black/30 p-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-xl font-black">
+                          {order.plan_name}
+                        </div>
+
+                        <div className="mt-1 text-sm text-white/50">
+                          {formatAmount(order.amount_cents, order.currency)}
+                        </div>
+                      </div>
+
+                      <div
+                        className={
+                          order.status === "active"
+                            ? "rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-200"
+                            : "rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/60"
+                        }
+                      >
+                        {order.status === "active" ? "有效中" : order.status}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 text-sm text-white/70 md:grid-cols-2">
+                      <div>
+                        <span className="text-white/40">每日额度：</span>
+                        {order.daily_limit} 次
+                      </div>
+
+                      <div>
+                        <span className="text-white/40">邮件通知：</span>
+                        {order.email_sent ? (
+                          <span className="text-emerald-200">已发送</span>
+                        ) : (
+                          <span className="text-yellow-200">未发送</span>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-white/40">开通时间：</span>
+                        {formatTime(order.created_at)}
+                      </div>
+
+                      <div>
+                        <span className="text-white/40">到期时间：</span>
+                        {formatTime(order.expired_at)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -372,7 +516,7 @@ export default function DashboardPage() {
                 href="/waitlist"
                 className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-center font-bold text-white transition hover:border-white/30"
               >
-                申请 Pro / 加入等待名单
+                申请 Pro
               </Link>
 
               <button
