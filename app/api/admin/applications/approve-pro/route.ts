@@ -36,6 +36,18 @@ function getExpiredAt(planText: string) {
   return null;
 }
 
+function getAmountCents(planText: string) {
+  if (planText.includes("年")) {
+    return 19900;
+  }
+
+  if (planText.includes("月")) {
+    return 1990;
+  }
+
+  return 0;
+}
+
 function formatExpiredAt(value: string | null) {
   if (!value) {
     return "长期有效 / 暂未设置到期时间";
@@ -73,6 +85,7 @@ async function sendProApprovedEmail(params: {
 
   if (!resendApiKey) {
     console.warn("Pro 开通通知邮件未发送：缺少 RESEND_API_KEY。");
+
     return {
       sent: false,
       reason: "缺少 RESEND_API_KEY",
@@ -137,6 +150,7 @@ https://aibotpro.top/dashboard
 
   if (error) {
     console.error("Pro 开通通知邮件发送失败：", error);
+
     return {
       sent: false,
       reason: "Resend 发送失败",
@@ -187,6 +201,7 @@ export async function POST(req: Request) {
     }
 
     const expiredAt = getExpiredAt(application.plan);
+    const amountCents = getAmountCents(application.plan);
     const dailyLimit = 100;
 
     const { error: planError } = await supabase.from("user_plans").upsert(
@@ -243,18 +258,72 @@ export async function POST(req: Request) {
       expiredAt,
     });
 
+    const { data: existingOrders } = await supabase
+      .from("pro_orders")
+      .select("id")
+      .eq("application_id", application.id)
+      .limit(1);
+
+    const existingOrderId = existingOrders?.[0]?.id;
+
+    const orderPayload = {
+      application_id: application.id,
+      user_id: application.user_id,
+      email: application.email,
+      name: application.name || null,
+      plan_name: application.plan,
+      amount_cents: amountCents,
+      currency: "CNY",
+      daily_limit: dailyLimit,
+      expired_at: expiredAt,
+      status: "active",
+      source: "manual_admin",
+      email_sent: emailResult.sent,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: orderError } = existingOrderId
+      ? await supabase
+          .from("pro_orders")
+          .update(orderPayload)
+          .eq("id", existingOrderId)
+      : await supabase.from("pro_orders").insert(orderPayload);
+
+    if (orderError) {
+      console.error("写入 Pro 开通记录失败：", orderError);
+
+      return Response.json({
+        success: true,
+        message: emailResult.sent
+          ? "Pro 已开通，邮件已发送，但开通记录写入失败，请检查 pro_orders 表。"
+          : "Pro 已开通，但邮件未发送，开通记录也写入失败，请检查 Resend 和 pro_orders 表。",
+        application: updatedApplication,
+        emailSent: emailResult.sent,
+        orderSaved: false,
+        plan: {
+          userId: application.user_id,
+          plan: "pro",
+          dailyLimit,
+          expiredAt,
+          amountCents,
+        },
+      });
+    }
+
     return Response.json({
       success: true,
       message: emailResult.sent
-        ? "已成功一键开通 Pro，并已发送邮件通知用户。"
-        : "已成功一键开通 Pro，但邮件通知未发送，请检查 Resend 配置。",
+        ? "已成功一键开通 Pro，已写入开通记录，并已发送邮件通知用户。"
+        : "已成功一键开通 Pro，已写入开通记录，但邮件通知未发送，请检查 Resend 配置。",
       application: updatedApplication,
       emailSent: emailResult.sent,
+      orderSaved: true,
       plan: {
         userId: application.user_id,
         plan: "pro",
         dailyLimit,
         expiredAt,
+        amountCents,
       },
     });
   } catch (error) {
