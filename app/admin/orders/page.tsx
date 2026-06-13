@@ -5,6 +5,14 @@ import { useEffect, useState } from "react";
 
 type OrderStatus = "active" | "expired" | "refunded" | "cancelled";
 
+type OrderFilter =
+  | "all"
+  | "active"
+  | "expired"
+  | "refunded"
+  | "cancelled"
+  | "missing_user_id";
+
 type ProOrder = {
   id: string;
   application_id: string | null;
@@ -86,11 +94,87 @@ function formatMoney(cents: number, currency = "CNY") {
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<ProOrder[]>([]);
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
   const [checkingExpired, setCheckingExpired] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  const filteredOrders = orders.filter((item) => {
+    const matchFilter =
+      orderFilter === "all" ||
+      (orderFilter === "active" && item.status === "active") ||
+      (orderFilter === "expired" && item.status === "expired") ||
+      (orderFilter === "refunded" && item.status === "refunded") ||
+      (orderFilter === "cancelled" && item.status === "cancelled") ||
+      (orderFilter === "missing_user_id" && !item.user_id);
+
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) {
+      return matchFilter;
+    }
+
+    const searchableText = [
+      item.id,
+      item.application_id || "",
+      item.user_id || "",
+      item.email,
+      item.name || "",
+      item.plan_name,
+      item.currency,
+      item.status,
+      item.source,
+      String(item.amount_cents || 0),
+      String(item.daily_limit || 0),
+      item.expired_at || "",
+      item.created_at,
+      item.updated_at,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return matchFilter && searchableText.includes(keyword);
+  });
+
+  const filterOptions: {
+    key: OrderFilter;
+    label: string;
+    count: number;
+  }[] = [
+    {
+      key: "all",
+      label: "全部订单",
+      count: orders.length,
+    },
+    {
+      key: "active",
+      label: "生效中",
+      count: orders.filter((item) => item.status === "active").length,
+    },
+    {
+      key: "expired",
+      label: "已过期",
+      count: orders.filter((item) => item.status === "expired").length,
+    },
+    {
+      key: "refunded",
+      label: "已退款",
+      count: orders.filter((item) => item.status === "refunded").length,
+    },
+    {
+      key: "cancelled",
+      label: "已停用",
+      count: orders.filter((item) => item.status === "cancelled").length,
+    },
+    {
+      key: "missing_user_id",
+      label: "无用户 ID",
+      count: orders.filter((item) => !item.user_id).length,
+    },
+  ];
 
   async function loadOrders() {
     setLoading(true);
@@ -289,7 +373,7 @@ export default function AdminOrdersPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              这里会显示后台一键开通 Pro 后生成的记录。你可以停用、退款、恢复 Pro，也可以手动检查过期会员。
+              这里会显示后台一键开通 Pro 后生成的记录。你可以筛选、搜索、停用、退款、恢复 Pro，也可以手动检查过期会员。
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -340,8 +424,57 @@ export default function AdminOrdersPage() {
             <h2 className="text-2xl font-black">Pro 开通记录</h2>
 
             <div className="rounded-full border border-emerald-300/20 bg-emerald-500/10 px-3 py-1 text-sm font-bold text-emerald-100">
-              {orders.length} 条
+              当前 {filteredOrders.length} 条 / 全部 {orders.length} 条
             </div>
+          </div>
+
+          <div className="mb-6 flex flex-wrap gap-2">
+            {filterOptions.map((item) => {
+              const active = orderFilter === item.key;
+
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setOrderFilter(item.key)}
+                  className={`rounded-full border px-4 py-2 text-xs font-black transition ${
+                    active
+                      ? "border-white bg-white text-black"
+                      : "border-white/10 bg-black/30 text-white/60 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {item.label}
+                  <span
+                    className={
+                      active ? "ml-2 text-black/60" : "ml-2 text-white/35"
+                    }
+                  >
+                    {item.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mb-6 flex flex-col gap-3 rounded-3xl border border-white/10 bg-black/30 p-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex-1">
+              <input
+                value={searchKeyword}
+                onChange={(event) => setSearchKeyword(event.target.value)}
+                placeholder="搜索邮箱、姓名、套餐、用户 ID、订单 ID、状态..."
+                className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-white/30"
+              />
+            </div>
+
+            {searchKeyword ? (
+              <button
+                type="button"
+                onClick={() => setSearchKeyword("")}
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black text-white/70 transition hover:bg-white/10"
+              >
+                清空搜索
+              </button>
+            ) : null}
           </div>
 
           {loading ? (
@@ -352,9 +485,13 @@ export default function AdminOrdersPage() {
             <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/60">
               暂时没有 Pro 开通记录。你需要先去「提交记录」里点一键开通 Pro。
             </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/60">
+              当前筛选或搜索条件下没有订单记录。
+            </div>
           ) : (
             <div className="space-y-4">
-              {orders.map((item) => {
+              {filteredOrders.map((item) => {
                 const currentStatus = statusMap[item.status] || statusMap.active;
                 const isUpdating = updatingId === item.id;
 
@@ -371,6 +508,12 @@ export default function AdminOrdersPage() {
                         <div className="mt-1 text-sm text-white/50">
                           {item.email}
                         </div>
+
+                        {!item.user_id ? (
+                          <div className="mt-2 inline-flex rounded-full border border-yellow-300/30 bg-yellow-500/10 px-3 py-1 text-xs font-black text-yellow-100">
+                            无用户 ID
+                          </div>
+                        ) : null}
                       </div>
 
                       <div
@@ -409,6 +552,16 @@ export default function AdminOrdersPage() {
                       <div>
                         <span className="text-white/40">邮件通知：</span>
                         {item.email_sent ? "已发送" : "未发送"}
+                      </div>
+
+                      <div>
+                        <span className="text-white/40">来源：</span>
+                        {item.source || "未记录"}
+                      </div>
+
+                      <div className="break-all">
+                        <span className="text-white/40">订单 ID：</span>
+                        {item.id}
                       </div>
 
                       <div className="md:col-span-2">
