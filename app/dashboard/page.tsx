@@ -5,18 +5,29 @@ import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
+const LOGIN_DAILY_LIMIT = 10;
+
+function getTodayDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function DashboardPage() {
   const supabase = useMemo(() => createClient(), []);
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const [usedCount, setUsedCount] = useState(0);
+  const [usageLoading, setUsageLoading] = useState(true);
+
+  const remainingCount = Math.max(LOGIN_DAILY_LIMIT - usedCount, 0);
 
   useEffect(() => {
     let mounted = true;
 
-    async function loadUser() {
+    async function loadDashboard() {
       setLoading(true);
+      setUsageLoading(true);
 
       const {
         data: { session },
@@ -27,25 +38,49 @@ export default function DashboardPage() {
       if (!session?.user) {
         setUser(null);
         setLoading(false);
+        setUsageLoading(false);
         window.location.replace("/login");
         return;
       }
 
       setUser(session.user);
       setLoading(false);
+
+      const today = getTodayDate();
+
+      const { data, error } = await supabase
+        .from("user_daily_usage")
+        .select("used_count")
+        .eq("user_id", session.user.id)
+        .eq("usage_date", today)
+        .maybeSingle();
+
+      if (!mounted) return;
+
+      if (error) {
+        console.error("读取今日使用次数失败：", error);
+        setUsedCount(0);
+      } else {
+        setUsedCount(Number(data?.used_count || 0));
+      }
+
+      setUsageLoading(false);
     }
 
-    loadUser();
+    loadDashboard();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
 
-      if (session?.user) {
-        setUser(session.user);
-        setLoading(false);
+      if (!session?.user) {
+        setUser(null);
+        window.location.replace("/login");
+        return;
       }
+
+      setUser(session.user);
     });
 
     return () => {
@@ -139,7 +174,7 @@ export default function DashboardPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              当前账号系统已经接入 Supabase。下一步可以继续把免费次数、Pro 套餐和使用记录绑定到你的账号上。
+              在这里可以查看账号信息、今日 AI 使用次数和当前套餐状态。
             </p>
           </div>
         </div>
@@ -168,45 +203,88 @@ export default function DashboardPage() {
               <div className="text-sm text-white/45">当前套餐</div>
               <div className="mt-2 text-lg font-black">Free 免费版</div>
               <p className="mt-2 text-sm leading-6 text-white/50">
-                当前先展示账号状态。下一步可以继续把每日免费次数和 Pro 权限写入数据库。
+                当前登录账号每日可使用 {LOGIN_DAILY_LIMIT} 次 AI 工具。
               </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
-          <h2 className="text-2xl font-black">快捷操作</h2>
+        <div className="space-y-6">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+            <h2 className="text-2xl font-black">今日使用次数</h2>
 
-          <div className="mt-6 grid gap-4">
-            <Link
-              href="/chat"
-              className="rounded-2xl bg-white px-5 py-4 text-center font-black text-black transition hover:bg-white/90"
-            >
-              进入 AI 工具箱
-            </Link>
+            {usageLoading ? (
+              <div className="mt-6 rounded-2xl border border-white/10 bg-black/30 p-5 text-white/50">
+                正在读取今日次数...
+              </div>
+            ) : (
+              <div className="mt-6 space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                  <div className="text-sm text-white/45">今日已用</div>
+                  <div className="mt-2 text-4xl font-black">
+                    {usedCount} / {LOGIN_DAILY_LIMIT}
+                  </div>
+                </div>
 
-            <Link
-              href="/pricing"
-              className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-center font-bold text-white transition hover:border-white/30"
-            >
-              查看套餐价格
-            </Link>
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                  <div className="text-sm text-white/45">今日剩余</div>
+                  <div className="mt-2 text-4xl font-black text-emerald-300">
+                    {remainingCount}
+                  </div>
+                  <p className="mt-2 text-sm text-white/50">
+                    次数每天自动刷新。
+                  </p>
+                </div>
 
-            <Link
-              href="/waitlist"
-              className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-center font-bold text-white transition hover:border-white/30"
-            >
-              申请 Pro / 加入等待名单
-            </Link>
+                <div className="h-3 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-white"
+                    style={{
+                      width: `${Math.min(
+                        (usedCount / LOGIN_DAILY_LIMIT) * 100,
+                        100
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={logoutLoading}
-              className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-center font-black text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {logoutLoading ? "退出中..." : "退出登录"}
-            </button>
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+            <h2 className="text-2xl font-black">快捷操作</h2>
+
+            <div className="mt-6 grid gap-4">
+              <Link
+                href="/chat"
+                className="rounded-2xl bg-white px-5 py-4 text-center font-black text-black transition hover:bg-white/90"
+              >
+                进入 AI 工具箱
+              </Link>
+
+              <Link
+                href="/pricing"
+                className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-center font-bold text-white transition hover:border-white/30"
+              >
+                查看套餐价格
+              </Link>
+
+              <Link
+                href="/waitlist"
+                className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-center font-bold text-white transition hover:border-white/30"
+              >
+                申请 Pro / 加入等待名单
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={logoutLoading}
+                className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-center font-black text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {logoutLoading ? "退出中..." : "退出登录"}
+              </button>
+            </div>
           </div>
         </div>
       </section>
