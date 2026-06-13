@@ -81,6 +81,13 @@ const adminCards = [
     badge: "用户套餐",
     className: "border-emerald-300/20 bg-emerald-500/10",
   },
+  {
+    title: "后台配置",
+    desc: "维护客服微信、付款说明、套餐价格、审核说明和网站公告。",
+    href: "/admin/settings",
+    badge: "站点设置",
+    className: "border-orange-300/20 bg-orange-500/10",
+  },
 ];
 
 const quickLinks = [
@@ -89,16 +96,20 @@ const quickLinks = [
     href: "/checkout",
   },
   {
+    title: "价格页",
+    href: "/pricing",
+  },
+  {
+    title: "后台配置",
+    href: "/admin/settings",
+  },
+  {
     title: "会员中心",
     href: "/dashboard",
   },
   {
     title: "AI 工具",
     href: "/chat",
-  },
-  {
-    title: "价格页",
-    href: "/pricing",
   },
 ];
 
@@ -342,6 +353,10 @@ export default function AdminHomePage() {
                 开通记录
               </Link>
 
+              <Link href="/admin/settings" className="hover:text-white">
+                后台配置
+              </Link>
+
               <button
                 type="button"
                 onClick={handleLogout}
@@ -438,7 +453,7 @@ export default function AdminHomePage() {
           ))}
         </div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
+        <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {adminCards.map((card) => (
             <Link
               key={card.href}
@@ -592,7 +607,7 @@ export default function AdminHomePage() {
               快速查看前台页面，确认用户看到的内容是否正常。
             </p>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {quickLinks.map((item) => (
                 <Link
                   key={item.href}
@@ -614,6 +629,7 @@ export default function AdminHomePage() {
               <p>3. 没有用户 ID 的付款记录，可以尝试按邮箱开通 Pro。</p>
               <p>4. 开通后去「开通记录」检查订单、到期时间、状态是否正确。</p>
               <p>5. 如果用户退款或违规，可以在「开通记录」里停用或标记退款。</p>
+              <p>6. 价格、客服微信、付款说明统一去「后台配置」修改，不要再手动改代码。</p>
             </div>
           </div>
         </div>
