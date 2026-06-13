@@ -1,4 +1,6 @@
 import Link from "next/link";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 const sections = [
   {
@@ -15,69 +17,36 @@ const sections = [
   },
   {
     title: "4. 免费体验次数",
-    desc: "当前免费版可能会限制每日使用次数。后续 Pro 套餐开放后，可能提供更高使用次数和更多高级功能。",
+    desc: "未登录用户每日可体验 5 次。注册并登录后，Free 免费版账号每日可使用 10 次。具体次数可能会根据产品调整。",
   },
   {
-    title: "5. 账号和会员",
-    desc: "当前登录和会员功能为展示版本。后续接入真实账号系统后，用户需要妥善保管账号信息，不得恶意刷量、攻击接口或滥用服务。",
+    title: "5. Pro 会员服务",
+    desc: "Pro 会员当前默认每日可使用 100 次。现阶段 Pro 会员采用人工开通方式，后续可能接入在线支付、订单系统和更多会员权益。",
   },
   {
-    title: "6. 服务变更",
+    title: "6. 账号和安全",
+    desc: "用户需要妥善保管账号信息，不得恶意刷量、攻击接口、批量注册、滥用服务或影响其他用户正常使用。",
+  },
+  {
+    title: "7. 服务变更",
     desc: "AI Bot Pro 后续可能根据产品发展，对功能、套餐、价格、使用次数和服务内容进行调整。",
   },
   {
-    title: "7. 联系我们",
+    title: "8. 免责声明",
+    desc: "因 AI 生成内容导致的决策、发布、商业使用或其他后果，需要用户自行判断和承担。我们建议用户在重要场景中进行人工核实。",
+  },
+  {
+    title: "9. 联系我们",
     desc: "如果你对服务条款、产品使用、会员套餐或功能建议有疑问，可以通过联系我们页面进行反馈。",
   },
 ];
 
 export default function TermsPage() {
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen overflow-hidden bg-black text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.2),transparent_35%)]" />
 
-      <header className="relative mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <Link href="/" className="text-2xl font-black tracking-tight">
-          AI Bot Pro
-        </Link>
-
-        <nav className="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
-          <Link href="/" className="hover:text-white">
-            首页
-          </Link>
-
-          <Link href="/chat" className="hover:text-white">
-            工具箱
-          </Link>
-
-          <Link href="/pricing" className="hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/contact" className="hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/login" className="hover:text-white">
-            登录
-          </Link>
-        </nav>
-
-        <Link
-          href="/chat"
-          className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-        >
-          免费体验
-        </Link>
-      </header>
+      <SiteHeader />
 
       <section className="relative mx-auto max-w-5xl px-6 pb-20 pt-16 md:pt-24">
         <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/10 px-5 py-2 text-sm text-zinc-300 backdrop-blur-xl">
@@ -94,9 +63,14 @@ export default function TermsPage() {
 
         <p className="mt-8 text-lg leading-8 text-zinc-400">
           本服务条款用于说明用户使用 AI Bot Pro AI 工具箱时需要了解的基本规则。
-          当前页面为网站展示版本，后续如果接入真实登录、支付、会员和订单系统，
-          可以继续完善为正式法律版本。
+          使用本站服务，即代表你理解并同意相关使用规则。后续如果接入在线支付、
+          订单系统和更多会员权益，本条款可能会继续更新。
         </p>
+
+        <div className="mt-6 rounded-3xl border border-blue-400/20 bg-blue-400/10 p-5 text-sm leading-7 text-blue-100/80">
+          提醒：AI 生成内容仅供参考。涉及法律、医疗、金融、合同、投资等重要场景时，
+          请务必进行人工核实或咨询专业人士。
+        </div>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
           <Link
@@ -173,43 +147,7 @@ export default function TermsPage() {
         </div>
       </section>
 
-      <footer className="relative border-t border-white/10 px-6 py-8 text-center text-sm text-zinc-500">
-        <div className="mb-4 flex flex-wrap justify-center gap-5">
-          <Link href="/about" className="transition hover:text-white">
-            关于我们
-          </Link>
-
-          <Link href="/contact" className="transition hover:text-white">
-            联系我们
-          </Link>
-
-          <Link href="/privacy" className="transition hover:text-white">
-            隐私政策
-          </Link>
-
-          <Link href="/terms" className="transition hover:text-white">
-            服务条款
-          </Link>
-
-          <Link href="/pricing" className="transition hover:text-white">
-            套餐价格
-          </Link>
-
-          <Link href="/waitlist" className="transition hover:text-white">
-            等待名单
-          </Link>
-
-          <Link href="/dashboard" className="transition hover:text-white">
-            会员中心
-          </Link>
-
-          <Link href="/login" className="transition hover:text-white">
-            登录
-          </Link>
-        </div>
-
-        <div>© 2026 AI Bot Pro. All rights reserved.</div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }
