@@ -31,7 +31,7 @@ const proBenefits = [
     desc: "开通后可在会员中心查看 Pro 状态和剩余次数。",
   },
   {
-    title: "后台人工开通",
+    title: "人工开通权限",
     desc: "提交申请后，我们会联系你并为账号开通权限。",
   },
 ];
@@ -72,15 +72,6 @@ export default function WaitlistPage() {
       setStatus({
         type: "error",
         message: "请填写邮箱地址，方便后续联系。",
-      });
-      setLoading(false);
-      return;
-    }
-
-    if (!form.plan.trim()) {
-      setStatus({
-        type: "error",
-        message: "请选择想开通的套餐。",
       });
       setLoading(false);
       return;
@@ -178,8 +169,8 @@ ${form.message || "未填写"}`,
               </h1>
 
               <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-                当前支付功能暂未开放，Pro 会员先采用人工开通方式。提交申请后，我们会收到邮件通知，
-                你确认后就可以通过后台开通 Pro 权限。
+                当前 Pro 会员先采用人工开通方式。提交申请后，我们会收到邮件通知，
+                确认后为你的账号开通 Pro 权限。
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -198,14 +189,14 @@ ${form.message || "未填写"}`,
 
               <div className="mt-8 rounded-3xl border border-purple-300/20 bg-purple-500/10 p-5">
                 <div className="text-xl font-black text-purple-100">
-                  开通流程
+                  申请流程
                 </div>
 
                 <div className="mt-4 space-y-3 text-sm leading-7 text-purple-100/75">
-                  <p>1. 用户提交 Pro 申请。</p>
-                  <p>2. 你收到邮件通知，确认用户邮箱或联系方式。</p>
-                  <p>3. 进入后台 `/admin/plans`，输入用户 ID 开通 Pro。</p>
-                  <p>4. 用户进入会员中心和 AI 工具页，即可看到 Pro 100 次额度。</p>
+                  <p>1. 提交 Pro 会员申请。</p>
+                  <p>2. 我们会通过邮箱或联系方式与你确认。</p>
+                  <p>3. 确认后为你的账号开通 Pro 权限。</p>
+                  <p>4. 开通后进入会员中心和 AI 工具页，即可看到 Pro 额度。</p>
                 </div>
               </div>
             </div>
