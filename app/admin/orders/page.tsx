@@ -69,10 +69,13 @@ export default function AdminOrdersPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  async function loadOrders() {
+  async function loadOrders(options?: { clearMessage?: boolean }) {
     setLoading(true);
-    setError("");
-    setNotice("");
+
+    if (options?.clearMessage !== false) {
+      setError("");
+      setNotice("");
+    }
 
     try {
       const res = await fetch("/api/admin/orders", {
@@ -125,9 +128,11 @@ export default function AdminOrdersPage() {
         throw new Error(data.error || "检查失败");
       }
 
-      setNotice(data.message || "检查完成。");
+      await loadOrders({
+        clearMessage: false,
+      });
 
-      await loadOrders();
+      setNotice(data.message || "检查完成。");
     } catch (err) {
       setError(err instanceof Error ? err.message : "检查失败，请稍后再试。");
     } finally {
@@ -220,7 +225,7 @@ export default function AdminOrdersPage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={loadOrders}
+                onClick={() => loadOrders()}
                 disabled={loading}
                 className="rounded-2xl bg-white px-6 py-3 font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
