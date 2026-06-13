@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type ApplicationStatus = "pending" | "contacted" | "approved" | "rejected";
+
 type ApplicationFilter =
   | "all"
   | "pending"
@@ -184,6 +185,7 @@ export default function AdminSubmissionsPage() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [applicationFilter, setApplicationFilter] =
     useState<ApplicationFilter>("all");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
   const [approvingId, setApprovingId] = useState("");
@@ -191,14 +193,38 @@ export default function AdminSubmissionsPage() {
   const [notice, setNotice] = useState("");
 
   const filteredApplications = applications.filter((item) => {
-    if (applicationFilter === "all") return true;
-    if (applicationFilter === "pending") return item.status === "pending";
-    if (applicationFilter === "approved") return item.status === "approved";
-    if (applicationFilter === "payment") return isPaymentApplication(item);
-    if (applicationFilter === "normal") return !isPaymentApplication(item);
-    if (applicationFilter === "missing_user_id") return !item.user_id;
+    const paymentInfo = parsePaymentMessage(item.message, item.use_case);
 
-    return true;
+    const matchFilter =
+      applicationFilter === "all" ||
+      (applicationFilter === "pending" && item.status === "pending") ||
+      (applicationFilter === "approved" && item.status === "approved") ||
+      (applicationFilter === "payment" && isPaymentApplication(item)) ||
+      (applicationFilter === "normal" && !isPaymentApplication(item)) ||
+      (applicationFilter === "missing_user_id" && !item.user_id);
+
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) {
+      return matchFilter;
+    }
+
+    const searchableText = [
+      item.name,
+      item.email,
+      item.company || "",
+      item.plan,
+      item.use_case,
+      item.message || "",
+      item.user_id || "",
+      paymentInfo?.paymentMethod || "",
+      paymentInfo?.paymentProof || "",
+      paymentInfo?.extraMessage || "",
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return matchFilter && searchableText.includes(keyword);
   });
 
   const filterOptions: {
@@ -479,7 +505,7 @@ export default function AdminSubmissionsPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              这里会显示用户提交的 Pro 会员申请、付款确认和联系反馈，支持筛选、一键开通、按邮箱开通、标记状态和复制用户 ID。
+              这里会显示用户提交的 Pro 会员申请、付款确认和联系反馈，支持一键开通、按邮箱开通、标记状态和复制用户 ID。
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -529,7 +555,7 @@ export default function AdminSubmissionsPage() {
               <h2 className="text-2xl font-black">Pro 申请记录</h2>
 
               <div className="rounded-full border border-purple-300/20 bg-purple-500/10 px-3 py-1 text-sm font-bold text-purple-100">
-                {filteredApplications.length} / {applications.length} 条
+                当前 {filteredApplications.length} 条 / 全部 {applications.length} 条
               </div>
             </div>
 
@@ -549,12 +575,37 @@ export default function AdminSubmissionsPage() {
                     }`}
                   >
                     {item.label}
-                    <span className={active ? "ml-2 text-black/60" : "ml-2 text-white/35"}>
+                    <span
+                      className={
+                        active ? "ml-2 text-black/60" : "ml-2 text-white/35"
+                      }
+                    >
                       {item.count}
                     </span>
                   </button>
                 );
               })}
+            </div>
+
+            <div className="mb-6 flex flex-col gap-3 rounded-3xl border border-white/10 bg-black/30 p-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex-1">
+                <input
+                  value={searchKeyword}
+                  onChange={(event) => setSearchKeyword(event.target.value)}
+                  placeholder="搜索姓名、邮箱、套餐、用户 ID、付款方式、付款凭证..."
+                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-white/30"
+                />
+              </div>
+
+              {searchKeyword ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchKeyword("")}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black text-white/70 transition hover:bg-white/10"
+                >
+                  清空搜索
+                </button>
+              ) : null}
             </div>
 
             {loading ? (
@@ -567,7 +618,7 @@ export default function AdminSubmissionsPage() {
               </div>
             ) : filteredApplications.length === 0 ? (
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-white/60">
-                当前筛选条件下没有记录。
+                当前筛选或搜索条件下没有记录。
               </div>
             ) : (
               <div className="space-y-4">
