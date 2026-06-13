@@ -19,6 +19,30 @@ const defaultSettings = [
     setting_value: "付款后请提交付款截图或填写已发客服微信。",
   },
   {
+    setting_key: "wechat_qr_url",
+    setting_label: "微信收款二维码图片链接",
+    setting_group: "payment",
+    setting_value: "",
+  },
+  {
+    setting_key: "alipay_qr_url",
+    setting_label: "支付宝收款二维码图片链接",
+    setting_group: "payment",
+    setting_value: "",
+  },
+  {
+    setting_key: "payment_account_name",
+    setting_label: "收款人名称",
+    setting_group: "payment",
+    setting_value: "AI Bot Pro",
+  },
+  {
+    setting_key: "payment_remark_notice",
+    setting_label: "付款备注提示",
+    setting_group: "payment",
+    setting_value: "付款时请备注你的登录邮箱，方便管理员核对。",
+  },
+  {
     setting_key: "monthly_price",
     setting_label: "Pro 月卡价格",
     setting_group: "pricing",

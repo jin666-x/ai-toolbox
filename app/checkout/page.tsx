@@ -9,6 +9,10 @@ const paymentMethods = ["微信支付", "支付宝", "银行卡转账", "其他�
 type PublicSettings = {
   customer_wechat?: string;
   payment_notice?: string;
+  wechat_qr_url?: string;
+  alipay_qr_url?: string;
+  payment_account_name?: string;
+  payment_remark_notice?: string;
   monthly_price?: string;
   yearly_price?: string;
   review_notice?: string;
@@ -23,6 +27,10 @@ type PublicSettingsResponse = {
 const defaultSettings: Required<PublicSettings> = {
   customer_wechat: "请填写客服微信",
   payment_notice: "付款后请提交付款截图或填写已发客服微信。",
+  wechat_qr_url: "",
+  alipay_qr_url: "",
+  payment_account_name: "AI Bot Pro",
+  payment_remark_notice: "付款时请备注你的登录邮箱，方便管理员核对。",
   monthly_price: "¥19.9",
   yearly_price: "¥199",
   review_notice: "管理员确认付款后会为账号开通 Pro 权限。",
@@ -201,6 +209,9 @@ export default function CheckoutPage() {
     }
   }
 
+  const hasWechatQr = Boolean(settings.wechat_qr_url.trim());
+  const hasAlipayQr = Boolean(settings.alipay_qr_url.trim());
+
   return (
     <main className="min-h-screen bg-[#050505] text-white">
       <section className="relative overflow-hidden border-b border-white/10">
@@ -339,6 +350,59 @@ export default function CheckoutPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="mt-6 rounded-[2rem] border border-purple-400/20 bg-purple-500/10 p-6">
+            <h2 className="text-xl font-black text-purple-100">收款信息</h2>
+
+            <div className="mt-4 rounded-3xl border border-white/10 bg-black/30 p-5">
+              <div className="text-sm text-white/45">收款人</div>
+              <div className="mt-1 text-2xl font-black">
+                {settings.payment_account_name}
+              </div>
+
+              <p className="mt-3 text-sm leading-7 text-purple-100/75">
+                {settings.payment_remark_notice}
+              </p>
+            </div>
+
+            {hasWechatQr || hasAlipayQr ? (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {hasWechatQr ? (
+                  <div className="rounded-3xl border border-emerald-300/20 bg-emerald-500/10 p-4">
+                    <div className="mb-3 text-center text-sm font-black text-emerald-100">
+                      微信收款码
+                    </div>
+                    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white p-2">
+                      <img
+                        src={settings.wechat_qr_url}
+                        alt="微信收款二维码"
+                        className="aspect-square w-full rounded-xl object-contain"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                {hasAlipayQr ? (
+                  <div className="rounded-3xl border border-blue-300/20 bg-blue-500/10 p-4">
+                    <div className="mb-3 text-center text-sm font-black text-blue-100">
+                      支付宝收款码
+                    </div>
+                    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white p-2">
+                      <img
+                        src={settings.alipay_qr_url}
+                        alt="支付宝收款二维码"
+                        className="aspect-square w-full rounded-xl object-contain"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-3xl border border-yellow-300/20 bg-yellow-500/10 p-5 text-sm leading-7 text-yellow-100/75">
+                还没有配置收款二维码。你可以在后台配置页填写微信或支付宝收款二维码图片链接。
+              </div>
+            )}
           </div>
 
           <div className="mt-6 rounded-[2rem] border border-yellow-400/20 bg-yellow-500/10 p-6">
