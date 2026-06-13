@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type WaitlistRequestBody = {
   name?: string;
@@ -63,33 +64,43 @@ export async function POST(req: Request) {
       );
     }
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const toEmail = process.env.CONTACT_TO_EMAIL;
-    const fromEmail =
-      process.env.CONTACT_FROM_EMAIL || "AI Bot Pro <noreply@aibotpro.top>";
-
     const createdAt = new Date().toLocaleString("zh-CN", {
       timeZone: "Asia/Shanghai",
       hour12: false,
     });
 
-    console.log("AI Bot Pro Pro 申请提交：", {
+    const supabase = createAdminClient();
+
+    const { error: dbError } = await supabase.from("pro_applications").insert({
       name,
       email,
-      company,
+      company: company || null,
       plan,
-      useCase,
-      message,
-      createdAt,
+      use_case: useCase,
+      message: message || null,
+      status: "pending",
     });
+
+    if (dbError) {
+      console.error("保存 Pro 申请到数据库失败：", dbError);
+
+      return Response.json(
+        { error: "提交失败，数据库保存失败，请稍后再试。" },
+        { status: 500 }
+      );
+    }
+
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const toEmail = process.env.CONTACT_TO_EMAIL;
+    const fromEmail =
+      process.env.CONTACT_FROM_EMAIL || "AI Bot Pro <noreply@aibotpro.top>";
 
     if (!resendApiKey || !toEmail) {
       console.warn("Pro 申请邮件未发送：缺少 RESEND_API_KEY 或 CONTACT_TO_EMAIL。");
 
       return Response.json({
         success: true,
-        message:
-          "提交成功，我们已经收到你的申请。当前未配置邮箱通知，内容已记录在服务端日志中。",
+        message: "提交成功，我们已经收到你的 Pro 申请。",
       });
     }
 
@@ -100,7 +111,10 @@ export async function POST(req: Request) {
     const safeCompany = escapeHtml(company || "未填写");
     const safePlan = escapeHtml(plan);
     const safeUseCase = escapeHtml(useCase);
-    const safeMessage = escapeHtml(message || "未填写").replaceAll("\n", "<br />");
+    const safeMessage = escapeHtml(message || "未填写").replaceAll(
+      "\n",
+      "<br />"
+    );
     const safeCreatedAt = escapeHtml(createdAt);
 
     const { error } = await resend.emails.send({
@@ -126,7 +140,7 @@ export async function POST(req: Request) {
           </div>
 
           <p style="margin-top: 24px; color: #666; font-size: 13px;">
-            这封邮件来自 AI Bot Pro Pro 申请页面。
+            这封邮件来自 AI Bot Pro Pro 申请页面，内容已同步保存到 Supabase。
           </p>
         </div>
       `,
@@ -148,10 +162,10 @@ ${message || "未填写"}
     if (error) {
       console.error("Resend Pro 申请邮件发送失败：", error);
 
-      return Response.json(
-        { error: "申请已收到，但邮件通知发送失败。请稍后再试。" },
-        { status: 500 }
-      );
+      return Response.json({
+        success: true,
+        message: "提交成功，我们已经收到你的 Pro 申请。",
+      });
     }
 
     return Response.json({

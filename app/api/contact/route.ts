@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type ContactRequestBody = {
   email?: string;
@@ -56,30 +57,39 @@ export async function POST(req: Request) {
       );
     }
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const toEmail = process.env.CONTACT_TO_EMAIL;
-    const fromEmail =
-      process.env.CONTACT_FROM_EMAIL || "AI Bot Pro <noreply@aibotpro.top>";
-
     const createdAt = new Date().toLocaleString("zh-CN", {
       timeZone: "Asia/Shanghai",
       hour12: false,
     });
 
-    console.log("AI Bot Pro 联系表单提交：", {
+    const supabase = createAdminClient();
+
+    const { error: dbError } = await supabase.from("contact_messages").insert({
       email,
       type,
       message,
-      createdAt,
     });
+
+    if (dbError) {
+      console.error("保存联系反馈到数据库失败：", dbError);
+
+      return Response.json(
+        { error: "提交失败，数据库保存失败，请稍后再试。" },
+        { status: 500 }
+      );
+    }
+
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const toEmail = process.env.CONTACT_TO_EMAIL;
+    const fromEmail =
+      process.env.CONTACT_FROM_EMAIL || "AI Bot Pro <noreply@aibotpro.top>";
 
     if (!resendApiKey || !toEmail) {
       console.warn("联系表单邮件未发送：缺少 RESEND_API_KEY 或 CONTACT_TO_EMAIL。");
 
       return Response.json({
         success: true,
-        message:
-          "提交成功，我们已经收到你的反馈。当前未配置邮箱通知，内容已记录在服务端日志中。",
+        message: "提交成功，我们已经收到你的反馈。",
       });
     }
 
@@ -110,7 +120,7 @@ export async function POST(req: Request) {
           </div>
 
           <p style="margin-top: 24px; color: #666; font-size: 13px;">
-            这封邮件来自 AI Bot Pro 联系我们页面。
+            这封邮件来自 AI Bot Pro 联系我们页面，内容已同步保存到 Supabase。
           </p>
         </div>
       `,
@@ -129,12 +139,10 @@ ${message}
     if (error) {
       console.error("Resend 联系表单邮件发送失败：", error);
 
-      return Response.json(
-        {
-          error: "反馈已收到，但邮件通知发送失败。请稍后再试。",
-        },
-        { status: 500 }
-      );
+      return Response.json({
+        success: true,
+        message: "提交成功，我们已经收到你的反馈。",
+      });
     }
 
     return Response.json({
