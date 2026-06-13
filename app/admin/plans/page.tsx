@@ -12,6 +12,7 @@ export default function AdminPlansPage() {
   const [dailyLimit, setDailyLimit] = useState(100);
   const [expiredAt, setExpiredAt] = useState("");
   const [loading, setLoading] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -24,6 +25,20 @@ export default function AdminPlansPage() {
   function setProPlan() {
     setPlan("pro");
     setDailyLimit(100);
+  }
+
+  async function handleLogout() {
+    if (logoutLoading) return;
+
+    setLogoutLoading(true);
+
+    try {
+      await fetch("/api/admin/logout", {
+        method: "POST",
+      });
+    } finally {
+      window.location.href = "/";
+    }
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -79,12 +94,23 @@ export default function AdminPlansPage() {
               <Link href="/" className="hover:text-white">
                 首页
               </Link>
+
               <Link href="/dashboard" className="hover:text-white">
                 会员中心
               </Link>
+
               <Link href="/chat" className="hover:text-white">
                 AI 工具
               </Link>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={logoutLoading}
+                className="rounded-full border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {logoutLoading ? "退出中..." : "退出后台"}
+              </button>
             </div>
           </nav>
 
@@ -249,7 +275,8 @@ export default function AdminPlansPage() {
           <div className="rounded-[2rem] border border-yellow-500/20 bg-yellow-500/10 p-6 text-yellow-100">
             <h2 className="text-xl font-black">注意</h2>
             <p className="mt-3 text-sm leading-7 text-yellow-100/80">
-              这个页面不要放到导航栏里，只给你自己用。真正保存套餐时，接口会校验管理员密码。
+              这个页面不要放到导航栏里，只给你自己用。当前后台已经加了二次访问保护，
+              退出后台后需要重新通过 admin_key 进入。
             </p>
           </div>
         </div>
