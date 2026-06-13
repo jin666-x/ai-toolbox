@@ -1,6 +1,32 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+
+type PublicSettings = {
+  customer_wechat?: string;
+  payment_notice?: string;
+  monthly_price?: string;
+  yearly_price?: string;
+  review_notice?: string;
+  site_announcement?: string;
+};
+
+type PublicSettingsResponse = {
+  success?: boolean;
+  settings?: PublicSettings;
+};
+
+const defaultSettings: Required<PublicSettings> = {
+  customer_wechat: "请填写客服微信",
+  payment_notice: "付款后请提交付款截图或填写已发客服微信。",
+  monthly_price: "¥19.9",
+  yearly_price: "¥199",
+  review_notice: "管理员确认付款后会为账号开通 Pro 权限。",
+  site_announcement: "AI Bot Pro 正在持续升级中。",
+};
 
 const tools = [
   {
@@ -80,58 +106,90 @@ const steps = [
   },
 ];
 
-const planCards = [
-  {
-    name: "未登录体验",
-    price: "免费",
-    unit: "",
-    limit: "5 次/天",
-    desc: "不用注册也可以快速体验 AI 工具箱基础能力。",
-    button: "立即体验",
-    href: "/chat",
-    hot: false,
-    status: "体验版",
-    features: ["无需登录", "每日 5 次", "适合快速试用"],
-  },
-  {
-    name: "Free 免费版",
-    price: "￥0",
-    unit: "/ 永久",
-    limit: "10 次/天",
-    desc: "注册登录后自动获得每日 10 次额度，适合轻度使用。",
-    button: "免费使用",
-    href: "/chat",
-    hot: false,
-    status: "当前可用",
-    features: ["登录账号", "每日 10 次", "会员中心查看额度"],
-  },
-  {
-    name: "Pro 月卡",
-    price: "￥19.9",
-    unit: "/ 月",
-    limit: "100 次/天",
-    desc: "适合高频创作、短视频运营、广告文案和办公提效。",
-    button: "去付款确认",
-    href: "/checkout",
-    hot: true,
-    status: "推荐",
-    features: ["每日 100 次", "人工审核", "邮件通知"],
-  },
-  {
-    name: "Pro 年卡",
-    price: "￥199",
-    unit: "/ 年",
-    limit: "100 次/天",
-    desc: "适合长期稳定使用 AI 工具，价格比月卡更划算。",
-    button: "去付款确认",
-    href: "/checkout",
-    hot: false,
-    status: "更划算",
-    features: ["全年使用", "每日 100 次", "适合长期用户"],
-  },
-];
-
 export default function HomePage() {
+  const [settings, setSettings] =
+    useState<Required<PublicSettings>>(defaultSettings);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const res = await fetch("/api/settings", {
+          cache: "no-store",
+        });
+
+        const data = (await res.json()) as PublicSettingsResponse;
+
+        if (data.settings) {
+          setSettings({
+            ...defaultSettings,
+            ...data.settings,
+          });
+        }
+      } catch (error) {
+        console.error("读取首页配置失败：", error);
+      } finally {
+        setLoadingSettings(false);
+      }
+    }
+
+    loadSettings();
+  }, []);
+
+  const planCards = useMemo(
+    () => [
+      {
+        name: "未登录体验",
+        price: "免费",
+        unit: "",
+        limit: "5 次/天",
+        desc: "不用注册也可以快速体验 AI 工具箱基础能力。",
+        button: "立即体验",
+        href: "/chat",
+        hot: false,
+        status: "体验版",
+        features: ["无需登录", "每日 5 次", "适合快速试用"],
+      },
+      {
+        name: "Free 免费版",
+        price: "￥0",
+        unit: "/ 永久",
+        limit: "10 次/天",
+        desc: "注册登录后自动获得每日 10 次额度，适合轻度使用。",
+        button: "免费使用",
+        href: "/chat",
+        hot: false,
+        status: "当前可用",
+        features: ["登录账号", "每日 10 次", "会员中心查看额度"],
+      },
+      {
+        name: "Pro 月卡",
+        price: settings.monthly_price,
+        unit: "/ 月",
+        limit: "100 次/天",
+        desc: "适合高频创作、短视频运营、广告文案和办公提效。",
+        button: "去付款确认",
+        href: "/checkout",
+        hot: true,
+        status: "推荐",
+        features: ["每日 100 次", "人工审核", "上传截图", "邮件通知"],
+      },
+      {
+        name: "Pro 年卡",
+        price: settings.yearly_price,
+        unit: "/ 年",
+        limit: "100 次/天",
+        desc: "适合长期稳定使用 AI 工具，价格比月卡更划算。",
+        button: "去付款确认",
+        href: "/checkout",
+        hot: false,
+        status: "更划算",
+        features: ["全年使用", "每日 100 次", "适合长期用户", "可续费"],
+      },
+    ],
+    [settings.monthly_price, settings.yearly_price]
+  );
+
   return (
     <main className="min-h-screen overflow-hidden bg-black text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.24),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.22),transparent_35%)]" />
@@ -156,30 +214,48 @@ export default function HomePage() {
           AI 自动帮你生成可直接使用的结果。
         </p>
 
+        {settings.site_announcement ? (
+          <div className="mt-8 max-w-3xl rounded-3xl border border-blue-300/20 bg-blue-500/10 p-5 text-left backdrop-blur-xl">
+            <div className="mb-2 text-sm font-black text-blue-100">
+              网站公告
+            </div>
+            <p className="text-sm leading-7 text-blue-100/75">
+              {loadingSettings ? "正在读取最新公告..." : settings.site_announcement}
+            </p>
+          </div>
+        ) : null}
+
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
           <Link
             href="/chat"
             className="rounded-2xl bg-white px-8 py-4 text-lg font-black text-black transition hover:bg-zinc-200"
           >
-            进入 AI 工具箱
+            免费使用
+          </Link>
+
+          <Link
+            href="/checkout"
+            className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 text-lg font-black text-purple-100 transition hover:bg-purple-500/30"
+          >
+            升级 Pro
           </Link>
 
           <Link
             href="/pricing"
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-bold text-white transition hover:bg-white/10"
           >
-            查看套餐价格
+            查看价格
           </Link>
 
           <Link
-            href="/checkout"
-            className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 text-lg font-bold text-purple-100 transition hover:bg-purple-500/30"
+            href="/dashboard"
+            className="rounded-2xl border border-emerald-300/20 bg-emerald-500/10 px-8 py-4 text-lg font-bold text-emerald-100 transition hover:bg-emerald-500/20"
           >
-            Pro 付款确认
+            会员中心
           </Link>
         </div>
 
-        <div className="mt-12 grid w-full max-w-5xl gap-4 text-left md:grid-cols-4">
+        <div className="mt-12 grid w-full max-w-6xl gap-4 text-left md:grid-cols-5">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
             <div className="text-3xl font-black">10+</div>
             <div className="mt-2 text-zinc-400">常用 AI 工具</div>
@@ -198,6 +274,15 @@ export default function HomePage() {
           <div className="rounded-3xl border border-purple-300/20 bg-purple-500/10 p-6 backdrop-blur-xl">
             <div className="text-3xl font-black text-purple-100">100 次</div>
             <div className="mt-2 text-purple-100/70">Pro 会员每日额度</div>
+          </div>
+
+          <div className="rounded-3xl border border-emerald-300/20 bg-emerald-500/10 p-6 backdrop-blur-xl">
+            <div className="text-3xl font-black text-emerald-100">
+              {settings.monthly_price}
+            </div>
+            <div className="mt-2 text-emerald-100/70">
+              Pro 月卡起
+            </div>
           </div>
         </div>
       </section>
@@ -252,6 +337,12 @@ export default function HomePage() {
             未登录可体验 5 次，登录后 Free 每日 10 次，Pro 每日 100 次。
             月卡和年卡都可以提交付款确认，由管理员人工审核开通。
           </p>
+
+          <div className="mx-auto mt-6 max-w-3xl rounded-3xl border border-purple-300/20 bg-purple-500/10 p-5 text-sm leading-7 text-purple-100/75">
+            当前 Pro 月卡：<span className="font-black text-white">{settings.monthly_price}</span>
+            ，Pro 年卡：<span className="font-black text-white">{settings.yearly_price}</span>。
+            价格和公告均由后台配置自动同步。
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -347,6 +438,13 @@ export default function HomePage() {
           >
             去付款确认
           </Link>
+
+          <Link
+            href="/dashboard"
+            className="inline-flex rounded-2xl border border-emerald-300/20 bg-emerald-500/10 px-8 py-4 font-black text-emerald-100 transition hover:bg-emerald-500/20"
+          >
+            查看会员中心
+          </Link>
         </div>
       </section>
 
@@ -392,6 +490,65 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="relative mx-auto max-w-7xl px-6 py-20">
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="rounded-[2rem] border border-emerald-300/20 bg-emerald-500/10 p-7 backdrop-blur-xl">
+            <div className="mb-4 text-sm font-bold text-emerald-100/70">
+              FREE START
+            </div>
+            <h3 className="text-3xl font-black text-emerald-100">
+              先免费体验
+            </h3>
+            <p className="mt-4 leading-7 text-emerald-100/70">
+              不登录每日 5 次，登录后每日 10 次。先体验工具效果，再决定是否升级 Pro。
+            </p>
+            <Link
+              href="/chat"
+              className="mt-6 inline-flex rounded-2xl bg-white px-6 py-3 font-black text-black transition hover:bg-zinc-200"
+            >
+              免费使用
+            </Link>
+          </div>
+
+          <div className="rounded-[2rem] border border-purple-300/20 bg-purple-500/10 p-7 backdrop-blur-xl">
+            <div className="mb-4 text-sm font-bold text-purple-100/70">
+              PRO UPGRADE
+            </div>
+            <h3 className="text-3xl font-black text-purple-100">
+              高频使用升级 Pro
+            </h3>
+            <p className="mt-4 leading-7 text-purple-100/70">
+              Pro 每日 100 次，支持上传付款截图，管理员审核后开通，并邮件通知。
+            </p>
+            <Link
+              href="/checkout"
+              className="mt-6 inline-flex rounded-2xl bg-white px-6 py-3 font-black text-black transition hover:bg-zinc-200"
+            >
+              升级 Pro
+            </Link>
+          </div>
+
+          <div className="rounded-[2rem] border border-blue-300/20 bg-blue-500/10 p-7 backdrop-blur-xl">
+            <div className="mb-4 text-sm font-bold text-blue-100/70">
+              SUPPORT
+            </div>
+            <h3 className="text-3xl font-black text-blue-100">人工审核</h3>
+            <p className="mt-4 leading-7 text-blue-100/70">
+              {settings.review_notice} 客服微信：
+              <span className="font-black text-white">
+                {settings.customer_wechat}
+              </span>
+            </p>
+            <Link
+              href="/contact"
+              className="mt-6 inline-flex rounded-2xl border border-blue-300/20 bg-blue-500/10 px-6 py-3 font-black text-blue-100 transition hover:bg-blue-500/20"
+            >
+              联系我们
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="relative mx-auto max-w-7xl px-6 py-24">
         <div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-10 text-center backdrop-blur-xl md:p-16">
           <h2 className="text-4xl font-black md:text-6xl">
@@ -402,6 +559,10 @@ export default function HomePage() {
             输入一个关键词，AI 自动生成文案、标题、广告词、短视频脚本、
             SEO 文章和工作汇报。适合自媒体、运营、销售、创业者和办公用户。
           </p>
+
+          <div className="mt-8 rounded-3xl border border-white/10 bg-black/30 p-5 text-sm leading-7 text-white/60">
+            {settings.payment_notice}
+          </div>
 
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <Link
