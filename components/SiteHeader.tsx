@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
   {
@@ -29,7 +30,11 @@ const navItems = [
 
 export default function SiteHeader() {
   const pathname = usePathname();
+  const supabase = useMemo(() => createClient(), []);
+
   const [open, setOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
   function isActive(href: string) {
     if (href.startsWith("/#")) {
@@ -38,6 +43,70 @@ export default function SiteHeader() {
 
     return pathname === href;
   }
+
+  async function handleLogout() {
+    if (logoutLoading) return;
+
+    setLogoutLoading(true);
+
+    try {
+      await Promise.race([
+        supabase.auth.signOut({
+          scope: "local",
+        }),
+        new Promise((resolve) => setTimeout(resolve, 1200)),
+      ]);
+    } catch (error) {
+      console.error("退出登录失败：", error);
+    }
+
+    if (typeof window !== "undefined") {
+      Object.keys(window.localStorage).forEach((key) => {
+        if (key.startsWith("sb-") || key.includes("supabase")) {
+          window.localStorage.removeItem(key);
+        }
+      });
+
+      Object.keys(window.sessionStorage).forEach((key) => {
+        if (key.startsWith("sb-") || key.includes("supabase")) {
+          window.sessionStorage.removeItem(key);
+        }
+      });
+
+      setIsLoggedIn(false);
+      setOpen(false);
+      window.location.href = "/login";
+    }
+  }
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      setIsLoggedIn(Boolean(session?.user));
+    }
+
+    checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+
+      setIsLoggedIn(Boolean(session?.user));
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   return (
     <header className="relative z-30 mx-auto max-w-7xl px-6 py-6">
@@ -65,12 +134,21 @@ export default function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Link
-            href="/login"
-            className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10"
-          >
-            登录
-          </Link>
+          {isLoggedIn ? (
+            <Link
+              href="/dashboard"
+              className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10"
+            >
+              会员中心
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10"
+            >
+              登录
+            </Link>
+          )}
 
           <Link
             href="/checkout"
@@ -79,12 +157,23 @@ export default function SiteHeader() {
             升级 Pro
           </Link>
 
-          <Link
-            href="/chat"
-            className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
-          >
-            立即使用
-          </Link>
+          {isLoggedIn ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={logoutLoading}
+              className="rounded-full border border-red-400/30 bg-red-500/10 px-5 py-2 text-sm font-bold text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {logoutLoading ? "退出中..." : "退出登录"}
+            </button>
+          ) : (
+            <Link
+              href="/chat"
+              className="rounded-full border border-white/10 bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
+            >
+              立即使用
+            </Link>
+          )}
         </div>
 
         <button
@@ -117,21 +206,23 @@ export default function SiteHeader() {
 
             <div className="my-2 h-px bg-white/10" />
 
-            <Link
-              href="/login"
-              onClick={() => setOpen(false)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
-            >
-              登录
-            </Link>
-
-            <Link
-              href="/dashboard"
-              onClick={() => setOpen(false)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-white/10"
-            >
-              进入会员中心
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href="/dashboard"
+                onClick={() => setOpen(false)}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-white/10"
+              >
+                进入会员中心
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setOpen(false)}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
+              >
+                登录
+              </Link>
+            )}
 
             <Link
               href="/checkout"
@@ -148,6 +239,17 @@ export default function SiteHeader() {
             >
               立即使用 AI 工具箱
             </Link>
+
+            {isLoggedIn ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={logoutLoading}
+                className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-center text-sm font-black text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {logoutLoading ? "退出中..." : "退出登录"}
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
