@@ -27,6 +27,14 @@ type OrdersResponse = {
   error?: string;
 };
 
+type ExpireProResponse = {
+  success: boolean;
+  message?: string;
+  expiredCount?: number;
+  orderStatusUpdated?: boolean;
+  error?: string;
+};
+
 function formatTime(value: string | null) {
   if (!value) return "未设置";
 
@@ -57,6 +65,7 @@ function formatAmount(amountCents: number, currency: string) {
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<ProOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expireLoading, setExpireLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -88,6 +97,41 @@ export default function AdminOrdersPage() {
       setError(err instanceof Error ? err.message : "读取失败，请稍后再试。");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function checkExpiredPro() {
+    if (expireLoading) return;
+
+    setExpireLoading(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const res = await fetch("/api/admin/expire-pro", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("后台接口返回异常，请重新通过 admin_key 进入后台。");
+      }
+
+      const data = (await res.json()) as ExpireProResponse;
+
+      if (!res.ok) {
+        throw new Error(data.error || "检查失败");
+      }
+
+      setNotice(data.message || "检查完成。");
+
+      await loadOrders();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "检查失败，请稍后再试。");
+    } finally {
+      setExpireLoading(false);
     }
   }
 
@@ -183,6 +227,15 @@ export default function AdminOrdersPage() {
                 {loading ? "刷新中..." : "刷新记录"}
               </button>
 
+              <button
+                type="button"
+                onClick={checkExpiredPro}
+                disabled={expireLoading}
+                className="rounded-2xl border border-yellow-300/20 bg-yellow-500/10 px-6 py-3 font-black text-yellow-100 transition hover:bg-yellow-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {expireLoading ? "检查中..." : "手动检查过期 Pro"}
+              </button>
+
               <Link
                 href="/admin/submissions"
                 className="rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-black text-white transition hover:bg-white/10"
@@ -246,10 +299,16 @@ export default function AdminOrdersPage() {
                       className={
                         order.status === "active"
                           ? "rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-200"
+                          : order.status === "expired"
+                          ? "rounded-full border border-yellow-400/20 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-200"
                           : "rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/60"
                       }
                     >
-                      {order.status === "active" ? "有效中" : order.status}
+                      {order.status === "active"
+                        ? "有效中"
+                        : order.status === "expired"
+                        ? "已过期"
+                        : order.status}
                     </div>
                   </div>
 
