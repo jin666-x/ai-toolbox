@@ -553,6 +553,8 @@ export default function ChatPage() {
   const messageLength = message.length;
   const isMessageTooLong = messageLength > MAX_MESSAGE_LENGTH;
   const shouldShowLimitCard = remainingCount <= 0 || Boolean(limitNotice);
+  const usagePercent =
+    usageLimit > 0 ? Math.min((usageCount / usageLimit) * 100, 100) : 0;
 
   async function loadLoginUsage(userId: string) {
     const today = getTodayDate();
@@ -938,10 +940,10 @@ export default function ChatPage() {
                 </Link>
 
                 <Link
-                  href="/waitlist"
+                  href="/checkout"
                   className="flex w-full items-center justify-center rounded-xl border border-purple-300/30 bg-purple-500/20 px-3 py-2 text-xs font-black text-purple-100 transition hover:bg-purple-500/30"
                 >
-                  申请 Pro
+                  升级 / 续费 Pro
                 </Link>
 
                 <Link
@@ -989,10 +991,10 @@ export default function ChatPage() {
               </Link>
 
               <Link
-                href="/waitlist"
+                href="/checkout"
                 className="inline-flex rounded-full border border-purple-300/30 bg-purple-500/20 px-4 py-2 text-sm font-bold text-purple-100 transition hover:bg-purple-500/30"
               >
-                申请 Pro
+                升级 / 续费 Pro
               </Link>
 
               <Link
@@ -1016,6 +1018,81 @@ export default function ChatPage() {
 
             <p className="mt-4 max-w-2xl text-zinc-400">{activeTool.desc}</p>
           </header>
+
+          <div className="mb-5 rounded-3xl border border-purple-300/20 bg-purple-500/10 p-5 shadow-2xl shadow-purple-500/10 backdrop-blur-xl">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs font-black text-zinc-200">
+                    {isLoggedIn ? getPlanName(userPlan.plan) : "免费体验版"}
+                  </span>
+
+                  {isLoggedIn && userPlan.plan === "pro" ? (
+                    <span className="rounded-full border border-purple-300/30 bg-purple-400/10 px-3 py-1 text-xs font-black text-purple-100">
+                      PRO
+                    </span>
+                  ) : null}
+
+                  {!isLoggedIn ? (
+                    <span className="rounded-full border border-yellow-300/30 bg-yellow-500/10 px-3 py-1 text-xs font-black text-yellow-100">
+                      登录后每日 10 次
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-xs text-zinc-500">今日已用</div>
+                    <div className="mt-1 text-3xl font-black text-white">
+                      {usageCount}
+                      <span className="text-base text-zinc-500"> / {usageLimit}</span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-xs text-zinc-500">今日剩余</div>
+                    <div className="mt-1 text-3xl font-black text-emerald-300">
+                      {remainingCount}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 h-3 overflow-hidden rounded-full bg-black/40">
+                  <div
+                    className={`h-full rounded-full ${
+                      userPlan.plan === "pro" ? "bg-purple-300" : "bg-white"
+                    }`}
+                    style={{
+                      width: `${usagePercent}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid min-w-[220px] gap-3">
+                <Link
+                  href="/checkout"
+                  className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-black text-black transition hover:bg-zinc-200"
+                >
+                  升级 / 续费 Pro
+                </Link>
+
+                <Link
+                  href="/dashboard"
+                  className="rounded-2xl border border-white/10 bg-black/30 px-5 py-3 text-center text-sm font-black text-zinc-200 transition hover:bg-white/10"
+                >
+                  会员中心
+                </Link>
+
+                <Link
+                  href="/pricing"
+                  className="rounded-2xl border border-purple-300/20 bg-purple-500/10 px-5 py-3 text-center text-sm font-black text-purple-100 transition hover:bg-purple-500/20"
+                >
+                  查看套餐价格
+                </Link>
+              </div>
+            </div>
+          </div>
 
           <div className="mb-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:hidden">
             {tools.map((tool) => (
@@ -1130,10 +1207,10 @@ export default function ChatPage() {
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <Link
-                  href="/waitlist"
+                  href="/checkout"
                   className="inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200"
                 >
-                  升级 Pro
+                  升级 / 提交付款确认
                 </Link>
 
                 <Link
