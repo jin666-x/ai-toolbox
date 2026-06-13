@@ -83,6 +83,46 @@ function formatTime(value: string) {
   }
 }
 
+function getPlanTag(plan: string) {
+  if (plan.includes("月")) {
+    return {
+      label: "Pro 月卡",
+      className: "border-purple-400/30 bg-purple-500/15 text-purple-100",
+      cardClass: "border-purple-400/20 bg-purple-500/[0.07]",
+    };
+  }
+
+  if (plan.includes("年")) {
+    return {
+      label: "Pro 年卡",
+      className: "border-blue-400/30 bg-blue-500/15 text-blue-100",
+      cardClass: "border-blue-400/20 bg-blue-500/[0.07]",
+    };
+  }
+
+  if (plan.includes("试用")) {
+    return {
+      label: "试用 Pro",
+      className: "border-yellow-400/30 bg-yellow-500/15 text-yellow-100",
+      cardClass: "border-yellow-400/20 bg-yellow-500/[0.07]",
+    };
+  }
+
+  if (plan.includes("团队") || plan.includes("定制")) {
+    return {
+      label: "团队方案",
+      className: "border-emerald-400/30 bg-emerald-500/15 text-emerald-100",
+      cardClass: "border-emerald-400/20 bg-emerald-500/[0.07]",
+    };
+  }
+
+  return {
+    label: plan || "未选择套餐",
+    className: "border-white/10 bg-white/5 text-white/70",
+    cardClass: "border-white/10 bg-black/30",
+  };
+}
+
 export default function AdminSubmissionsPage() {
   const [applications, setApplications] = useState<ProApplication[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
@@ -178,6 +218,12 @@ export default function AdminSubmissionsPage() {
   async function approvePro(applicationId: string) {
     if (approvingId) return;
 
+    const confirmed = window.confirm(
+      "确定要为这个用户一键开通 Pro 吗？系统会同步写入会员套餐、开通记录，并发送邮件通知。"
+    );
+
+    if (!confirmed) return;
+
     setApprovingId(applicationId);
     setError("");
     setNotice("");
@@ -231,6 +277,16 @@ export default function AdminSubmissionsPage() {
       setError("");
     } catch {
       setError("复制失败，请手动选中用户 ID 复制。");
+    }
+  }
+
+  async function copyEmail(email: string) {
+    try {
+      await navigator.clipboard.writeText(email);
+      setNotice("邮箱已复制。");
+      setError("");
+    } catch {
+      setError("复制失败，请手动选中邮箱复制。");
     }
   }
 
@@ -303,7 +359,7 @@ export default function AdminSubmissionsPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-              这里会显示用户提交的 Pro 会员申请和联系反馈，数据来自 Supabase。
+              这里会显示用户提交的 Pro 会员申请和联系反馈，支持一键开通、标记状态和复制用户 ID。
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -370,17 +426,29 @@ export default function AdminSubmissionsPage() {
                 {applications.map((item) => {
                   const currentStatus =
                     statusMap[item.status] || statusMap.pending;
+                  const planTag = getPlanTag(item.plan);
                   const isUpdating = updatingId === item.id;
                   const isApproving = approvingId === item.id;
 
                   return (
                     <div
                       key={item.id}
-                      className="rounded-3xl border border-white/10 bg-black/30 p-5"
+                      className={`rounded-3xl border p-5 ${planTag.cardClass}`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <div className="text-xl font-black">{item.name}</div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="text-xl font-black">
+                              {item.name}
+                            </div>
+
+                            <div
+                              className={`rounded-full border px-3 py-1 text-xs font-black ${planTag.className}`}
+                            >
+                              {planTag.label}
+                            </div>
+                          </div>
+
                           <div className="mt-1 text-sm text-white/50">
                             {item.email}
                           </div>
@@ -395,8 +463,12 @@ export default function AdminSubmissionsPage() {
 
                       <div className="mt-4 grid gap-3 text-sm text-white/70 md:grid-cols-2">
                         <div>
-                          <span className="text-white/40">套餐：</span>
-                          {item.plan}
+                          <span className="text-white/40">申请套餐：</span>
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs font-black ${planTag.className}`}
+                          >
+                            {item.plan}
+                          </span>
                         </div>
 
                         <div>
@@ -438,9 +510,13 @@ export default function AdminSubmissionsPage() {
                             type="button"
                             disabled={isApproving || item.status === "approved"}
                             onClick={() => approvePro(item.id)}
-                            className="rounded-full border border-emerald-400/20 bg-emerald-500 px-4 py-2 text-xs font-black text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-full border border-emerald-300/30 bg-emerald-400 px-5 py-2 text-xs font-black text-black shadow-lg shadow-emerald-500/10 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            {isApproving ? "开通中..." : "一键开通 Pro"}
+                            {isApproving
+                              ? "开通中..."
+                              : item.status === "approved"
+                              ? "已开通"
+                              : "一键开通 Pro"}
                           </button>
                         ) : null}
 
@@ -453,6 +529,14 @@ export default function AdminSubmissionsPage() {
                             复制用户 ID
                           </button>
                         ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => copyEmail(item.email)}
+                          className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white/70 transition hover:bg-white/10"
+                        >
+                          复制邮箱
+                        </button>
 
                         <button
                           type="button"
