@@ -60,18 +60,18 @@ const plans = [
       "支持人工开通",
       "适合重度使用用户",
     ],
-    button: "咨询年卡方案",
-    href: "/contact",
+    button: "申请年卡 Pro",
+    href: "/waitlist",
     hot: false,
     status: "人工开通",
-    note: "年卡适合长期用户，可先联系我们确认开通方式。",
+    note: "提交申请后由管理员审核开通，开通成功后会邮件通知。",
   },
 ];
 
 const faqs = [
   {
     q: "现在可以直接支付购买吗？",
-    a: "当前支付功能还没有接入。Pro 会员可以先通过申请页或联系页面提交申请，然后由管理员手动开通。",
+    a: "当前支付功能还没有接入。Pro 会员可以先通过申请页提交申请，然后由管理员手动开通。",
   },
   {
     q: "免费版每天可以用几次？",
@@ -83,7 +83,7 @@ const faqs = [
   },
   {
     q: "怎么知道自己是不是 Pro？",
-    a: "登录后进入会员中心，可以看到当前套餐、今日已用次数和今日剩余次数。",
+    a: "登录后进入会员中心，可以看到当前套餐、今日已用次数、今日剩余次数和 Pro 开通记录。",
   },
 ];
 
@@ -128,10 +128,10 @@ export default function PricingPage() {
           </Link>
 
           <Link
-            href="/contact"
+            href="/dashboard"
             className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-lg font-black text-white transition hover:bg-white/10"
           >
-            联系我们
+            查看会员中心
           </Link>
         </div>
       </section>
@@ -222,7 +222,7 @@ export default function PricingPage() {
 
               <p className="mt-6 leading-8 text-zinc-400">
                 当前系统已经支持登录账号、会员中心、每日使用次数、Free / Pro
-                套餐识别和会员开通。支付功能后续接入前，可以先通过申请页或联系页面提交申请。
+                套餐识别、会员开通、到期降级和开通记录。支付功能后续接入前，可以先通过申请页提交申请。
               </p>
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -234,10 +234,10 @@ export default function PricingPage() {
                 </Link>
 
                 <Link
-                  href="/contact"
+                  href="/dashboard"
                   className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black text-white transition hover:bg-white/10"
                 >
-                  联系我们
+                  查看会员中心
                 </Link>
               </div>
             </div>
