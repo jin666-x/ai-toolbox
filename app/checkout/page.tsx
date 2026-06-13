@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -44,11 +44,6 @@ const paymentMethods = ["微信支付", "支付宝", "银行卡转账", "其他�
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const selectedPlanInfo = useMemo(
-    () => plans.find((plan) => plan.name === selectedPlan) || plans[0],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
 
   const [selectedPlan, setSelectedPlan] = useState(plans[0].name);
   const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0]);
@@ -64,7 +59,7 @@ export default function CheckoutPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
-  const currentPlan = plans.find((plan) => plan.name === selectedPlan) || selectedPlanInfo;
+  const currentPlan = plans.find((plan) => plan.name === selectedPlan) || plans[0];
   const isLoggedIn = Boolean(userId);
 
   useEffect(() => {
