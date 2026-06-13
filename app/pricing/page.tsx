@@ -1,72 +1,32 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 
-const plans = [
-  {
-    name: "Free 免费版",
-    price: "￥0",
-    unit: "/ 永久",
-    desc: "适合新用户体验 AI 工具箱，登录后每日可使用 10 次。",
-    features: [
-      "登录账号每日 10 次",
-      "未登录体验每日 5 次",
-      "支持 AI 聊天助手",
-      "支持爆款文案生成",
-      "支持标题生成",
-      "支持广告优化",
-      "支持代码助手",
-      "会员中心查看今日次数",
-    ],
-    button: "立即免费使用",
-    href: "/chat",
-    hot: false,
-    status: "当前可用",
-    note: "注册 / 登录后可获得每日 10 次使用额度。",
-  },
-  {
-    name: "Pro 月卡",
-    price: "￥19.9",
-    unit: "/ 月",
-    desc: "适合经常生成文案、标题、脚本、广告词的用户。",
-    features: [
-      "每日 100 次 AI 使用额度",
-      "解锁全部 AI 工具",
-      "适合短视频运营",
-      "适合自媒体创作",
-      "适合销售和广告投放",
-      "优先体验新功能",
-      "会员中心显示 Pro 状态",
-      "管理员审核后开通",
-    ],
-    button: "提交付款确认",
-    href: "/checkout",
-    hot: true,
-    status: "人工审核",
-    note: "提交付款确认后，由管理员审核并开通 Pro。",
-  },
-  {
-    name: "Pro 年卡",
-    price: "￥199",
-    unit: "/ 年",
-    desc: "适合长期使用 AI 工具提升效率的个人、团队和创业者。",
-    features: [
-      "全年使用更划算",
-      "每日 100 次 AI 使用额度",
-      "优先体验新工具",
-      "适合长期内容生产",
-      "适合副业、自媒体、创业者",
-      "后续可升级更多权益",
-      "支持人工审核开通",
-      "适合重度使用用户",
-    ],
-    button: "提交年卡确认",
-    href: "/checkout",
-    hot: false,
-    status: "人工审核",
-    note: "提交付款确认后由管理员审核开通，开通成功后会邮件通知。",
-  },
-];
+type PublicSettings = {
+  customer_wechat?: string;
+  payment_notice?: string;
+  monthly_price?: string;
+  yearly_price?: string;
+  review_notice?: string;
+  site_announcement?: string;
+};
+
+type PublicSettingsResponse = {
+  success?: boolean;
+  settings?: PublicSettings;
+};
+
+const defaultSettings: Required<PublicSettings> = {
+  customer_wechat: "请填写客服微信",
+  payment_notice: "付款后请提交付款截图或填写已发客服微信。",
+  monthly_price: "¥19.9",
+  yearly_price: "¥199",
+  review_notice: "管理员确认付款后会为账号开通 Pro 权限。",
+  site_announcement: "AI Bot Pro 正在持续升级中。",
+};
 
 const faqs = [
   {
@@ -88,6 +48,105 @@ const faqs = [
 ];
 
 export default function PricingPage() {
+  const [settings, setSettings] = useState<Required<PublicSettings>>(
+    defaultSettings
+  );
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  const plans = useMemo(
+    () => [
+      {
+        name: "Free 免费版",
+        price: "￥0",
+        unit: "/ 永久",
+        desc: "适合新用户体验 AI 工具箱，登录后每日可使用 10 次。",
+        features: [
+          "登录账号每日 10 次",
+          "未登录体验每日 5 次",
+          "支持 AI 聊天助手",
+          "支持爆款文案生成",
+          "支持标题生成",
+          "支持广告优化",
+          "支持代码助手",
+          "会员中心查看今日次数",
+        ],
+        button: "立即免费使用",
+        href: "/chat",
+        hot: false,
+        status: "当前可用",
+        note: "注册 / 登录后可获得每日 10 次使用额度。",
+      },
+      {
+        name: "Pro 月卡",
+        price: settings.monthly_price,
+        unit: "/ 月",
+        desc: "适合经常生成文案、标题、脚本、广告词的用户。",
+        features: [
+          "每日 100 次 AI 使用额度",
+          "解锁全部 AI 工具",
+          "适合短视频运营",
+          "适合自媒体创作",
+          "适合销售和广告投放",
+          "优先体验新功能",
+          "会员中心显示 Pro 状态",
+          "管理员审核后开通",
+        ],
+        button: "提交付款确认",
+        href: "/checkout",
+        hot: true,
+        status: "人工审核",
+        note: "提交付款确认后，由管理员审核并开通 Pro。",
+      },
+      {
+        name: "Pro 年卡",
+        price: settings.yearly_price,
+        unit: "/ 年",
+        desc: "适合长期使用 AI 工具提升效率的个人、团队和创业者。",
+        features: [
+          "全年使用更划算",
+          "每日 100 次 AI 使用额度",
+          "优先体验新工具",
+          "适合长期内容生产",
+          "适合副业、自媒体、创业者",
+          "后续可升级更多权益",
+          "支持人工审核开通",
+          "适合重度使用用户",
+        ],
+        button: "提交年卡确认",
+        href: "/checkout",
+        hot: false,
+        status: "人工审核",
+        note: "提交付款确认后由管理员审核开通，开通成功后会邮件通知。",
+      },
+    ],
+    [settings.monthly_price, settings.yearly_price]
+  );
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const res = await fetch("/api/settings", {
+          cache: "no-store",
+        });
+
+        const data = (await res.json()) as PublicSettingsResponse;
+
+        if (data.settings) {
+          setSettings({
+            ...defaultSettings,
+            ...data.settings,
+          });
+        }
+      } catch (error) {
+        console.error("读取价格页配置失败：", error);
+      } finally {
+        setLoadingSettings(false);
+      }
+    }
+
+    loadSettings();
+  }, []);
+
   return (
     <main className="min-h-screen overflow-hidden bg-black text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.2),transparent_35%)]" />
@@ -111,6 +170,12 @@ export default function PricingPage() {
           免费版适合体验，Pro 版适合高频创作、文案生成、短视频脚本、
           广告优化和办公效率提升。当前 Pro 会员支持付款确认后人工审核开通。
         </p>
+
+        {settings.site_announcement ? (
+          <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-blue-300/20 bg-blue-500/10 p-4 text-sm leading-7 text-blue-100/80">
+            {loadingSettings ? "正在读取最新配置..." : settings.site_announcement}
+          </div>
+        ) : null}
 
         <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
           <Link
@@ -225,6 +290,20 @@ export default function PricingPage() {
                 套餐识别、会员开通、到期降级和开通记录。你可以通过付款确认页提交信息，管理员审核后开通。
               </p>
 
+              <div className="mt-6 rounded-3xl border border-purple-300/20 bg-purple-500/10 p-5">
+                <h3 className="font-black text-purple-100">付款说明</h3>
+                <p className="mt-2 text-sm leading-7 text-purple-100/75">
+                  {settings.payment_notice}
+                </p>
+
+                <p className="mt-2 text-sm leading-7 text-purple-100/75">
+                  客服微信：
+                  <span className="ml-1 font-black text-white">
+                    {settings.customer_wechat}
+                  </span>
+                </p>
+              </div>
+
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <Link
                   href="/checkout"
@@ -263,6 +342,15 @@ export default function PricingPage() {
                 </div>
                 <div className="mt-2 text-purple-100/70">
                   Pro 会员账号每日次数
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-emerald-300/20 bg-emerald-500/10 p-6">
+                <div className="text-3xl font-black text-emerald-100">
+                  {settings.monthly_price} / {settings.yearly_price}
+                </div>
+                <div className="mt-2 text-emerald-100/70">
+                  价格由后台配置页统一维护
                 </div>
               </div>
             </div>
