@@ -83,18 +83,51 @@ const steps = [
 const planCards = [
   {
     name: "未登录体验",
+    price: "免费",
+    unit: "",
     limit: "5 次/天",
-    desc: "适合快速体验 AI 工具箱基础能力。",
+    desc: "不用注册也可以快速体验 AI 工具箱基础能力。",
+    button: "立即体验",
+    href: "/chat",
+    hot: false,
+    status: "体验版",
+    features: ["无需登录", "每日 5 次", "适合快速试用"],
   },
   {
     name: "Free 免费版",
+    price: "￥0",
+    unit: "/ 永久",
     limit: "10 次/天",
-    desc: "注册登录后自动获得每日 10 次额度。",
+    desc: "注册登录后自动获得每日 10 次额度，适合轻度使用。",
+    button: "免费使用",
+    href: "/chat",
+    hot: false,
+    status: "当前可用",
+    features: ["登录账号", "每日 10 次", "会员中心查看额度"],
   },
   {
-    name: "Pro 会员版",
+    name: "Pro 月卡",
+    price: "￥19.9",
+    unit: "/ 月",
     limit: "100 次/天",
     desc: "适合高频创作、短视频运营、广告文案和办公提效。",
+    button: "申请月卡 Pro",
+    href: "/waitlist",
+    hot: true,
+    status: "推荐",
+    features: ["每日 100 次", "人工开通", "邮件通知"],
+  },
+  {
+    name: "Pro 年卡",
+    price: "￥199",
+    unit: "/ 年",
+    limit: "100 次/天",
+    desc: "适合长期稳定使用 AI 工具，价格比月卡更划算。",
+    button: "申请年卡 Pro",
+    href: "/waitlist",
+    hot: false,
+    status: "更划算",
+    features: ["全年使用", "每日 100 次", "适合长期用户"],
   },
 ];
 
@@ -212,35 +245,90 @@ export default function HomePage() {
           </div>
 
           <h2 className="text-4xl font-black md:text-5xl">
-            从免费体验到 Pro 高频使用
+            免费体验，也能升级 Pro 高频使用
           </h2>
 
           <p className="mt-5 text-zinc-400">
-            先免费体验，登录后获得更多额度，需要高频使用可申请 Pro 会员。
+            未登录可体验 5 次，登录后 Free 每日 10 次，Pro 每日 100 次。
+            月卡和年卡都可以提交申请，由管理员人工开通。
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {planCards.map((plan) => (
             <div
               key={plan.name}
-              className={`rounded-[2rem] border p-8 backdrop-blur-xl ${
-                plan.name.includes("Pro")
-                  ? "border-purple-300/30 bg-purple-500/10"
+              className={`relative rounded-[2rem] border p-7 backdrop-blur-xl transition hover:-translate-y-1 ${
+                plan.hot
+                  ? "border-purple-300/40 bg-purple-500/10 shadow-2xl shadow-purple-500/10"
                   : "border-white/10 bg-white/5"
               }`}
             >
-              <div className="text-xl font-black">{plan.name}</div>
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div className="text-xl font-black">{plan.name}</div>
+
+                <div
+                  className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                    plan.hot
+                      ? "border-purple-300/30 bg-purple-500/20 text-purple-100"
+                      : "border-white/10 bg-black/30 text-zinc-300"
+                  }`}
+                >
+                  {plan.status}
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-end gap-2">
+                <div
+                  className={`text-4xl font-black ${
+                    plan.hot ? "text-purple-100" : "text-white"
+                  }`}
+                >
+                  {plan.price}
+                </div>
+                {plan.unit ? (
+                  <div className="pb-1 text-sm text-zinc-500">{plan.unit}</div>
+                ) : null}
+              </div>
 
               <div
-                className={`mt-5 text-5xl font-black ${
-                  plan.name.includes("Pro") ? "text-purple-100" : "text-white"
+                className={`mt-4 text-3xl font-black ${
+                  plan.hot ? "text-purple-100" : "text-white"
                 }`}
               >
                 {plan.limit}
               </div>
 
-              <p className="mt-5 leading-7 text-zinc-400">{plan.desc}</p>
+              <p className="mt-5 min-h-20 leading-7 text-zinc-400">
+                {plan.desc}
+              </p>
+
+              <div className="mt-6 space-y-3">
+                {plan.features.map((feature) => (
+                  <div
+                    key={feature}
+                    className="flex items-center gap-3 text-sm text-zinc-300"
+                  >
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${
+                        plan.hot ? "bg-purple-300" : "bg-emerald-400"
+                      }`}
+                    />
+                    {feature}
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                href={plan.href}
+                className={`mt-7 flex w-full items-center justify-center rounded-2xl px-5 py-4 font-black transition ${
+                  plan.hot
+                    ? "bg-white text-black hover:bg-zinc-200"
+                    : "border border-white/10 bg-white/5 text-white hover:bg-white/10"
+                }`}
+              >
+                {plan.button}
+              </Link>
             </div>
           ))}
         </div>
@@ -250,7 +338,7 @@ export default function HomePage() {
             href="/pricing"
             className="inline-flex rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
           >
-            查看套餐价格
+            查看完整套餐价格
           </Link>
 
           <Link
