@@ -33,6 +33,18 @@ function getLoginRedirect(request: NextRequest) {
   return loginUrl;
 }
 
+function nextWithAdminHeaders(request: NextRequest, adminEmail: string) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-aibotpro-admin", "1");
+  requestHeaders.set("x-aibotpro-admin-email", adminEmail);
+
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+}
+
 async function getVerifiedUserEmail(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -40,16 +52,9 @@ async function getVerifiedUserEmail(request: NextRequest) {
   if (!supabaseUrl || !supabaseAnonKey) {
     return {
       email: undefined,
-      response: NextResponse.next(),
       error: "服务器未配置 Supabase 登录环境变量。",
     };
   }
-
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -59,16 +64,6 @@ async function getVerifiedUserEmail(request: NextRequest) {
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
-        });
-
-        response = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
-        });
-
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
         });
       },
     },
@@ -82,14 +77,12 @@ async function getVerifiedUserEmail(request: NextRequest) {
   if (error || !user?.email) {
     return {
       email: undefined,
-      response,
       error: undefined,
     };
   }
 
   return {
     email: user.email.trim().toLowerCase(),
-    response,
     error: undefined,
   };
 }
@@ -131,6 +124,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  let adminEmail = "admin_key";
+
   if (hasAdminEmailWhitelist) {
     const verified = await getVerifiedUserEmail(request);
 
@@ -150,13 +145,11 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(getLoginRedirect(request));
     }
 
-    if (hasValidAdminCookie) {
-      return verified.response;
-    }
+    adminEmail = verified.email || "unknown_admin";
   }
 
   if (hasValidAdminCookie) {
-    return NextResponse.next();
+    return nextWithAdminHeaders(request, adminEmail);
   }
 
   const cleanUrl = request.nextUrl.clone();
