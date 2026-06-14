@@ -1,6 +1,29 @@
+import { writeAdminAuditLog } from "@/lib/admin-audit-log";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type PlanType = "free" | "pro";
+
+function isUuidLike(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
+}
+
+function normalizeExpiredAt(value: unknown) {
+  const text = String(value || "").trim();
+
+  if (!text) {
+    return null;
+  }
+
+  const date = new Date(text);
+
+  if (Number.isNaN(date.getTime())) {
+    return "invalid";
+  }
+
+  return date.toISOString();
+}
 
 export async function POST(req: Request) {
   try {
@@ -19,7 +42,7 @@ export async function POST(req: Request) {
     const userId = String(body.userId || "").trim();
     const plan = String(body.plan || "free").trim().toLowerCase() as PlanType;
     const dailyLimit = Number(body.dailyLimit || 10);
-    const expiredAt = body.expiredAt ? String(body.expiredAt).trim() : null;
+    const expiredAt = normalizeExpiredAt(body.expiredAt);
 
     if (password !== adminSecret) {
       return Response.json({ error: "管理员密码错误。" }, { status: 401 });
@@ -27,6 +50,13 @@ export async function POST(req: Request) {
 
     if (!userId) {
       return Response.json({ error: "请输入用户 ID。" }, { status: 400 });
+    }
+
+    if (!isUuidLike(userId)) {
+      return Response.json(
+        { error: "用户 ID 格式不正确，请确认是否为 Supabase 用户 UUID。" },
+        { status: 400 }
+      );
     }
 
     if (plan !== "free" && plan !== "pro") {
@@ -43,7 +73,29 @@ export async function POST(req: Request) {
       );
     }
 
+    if (dailyLimit > 10000) {
+      return Response.json(
+        { error: "每日次数不能超过 10000，避免误操作。" },
+        { status: 400 }
+      );
+    }
+
+    if (expiredAt === "invalid") {
+      return Response.json(
+        { error: "到期时间格式不正确，请重新填写。" },
+        { status: 400 }
+      );
+    }
+
     const supabase = createAdminClient();
+
+    const { data: beforePlan } = await supabase
+      .from("user_plans")
+      .select("plan, daily_limit, expired_at")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const now = new Date().toISOString();
 
     const { error } = await supabase.from("user_plans").upsert(
       {
@@ -51,7 +103,7 @@ export async function POST(req: Request) {
         plan,
         daily_limit: dailyLimit,
         expired_at: expiredAt || null,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       },
       {
         onConflict: "user_id",
@@ -67,6 +119,22 @@ export async function POST(req: Request) {
       );
     }
 
+    await writeAdminAuditLog({
+      req,
+      action: "update_plan",
+      targetType: "user_plan",
+      targetId: userId,
+      description: "管理员手动修改用户套餐。",
+      metadata: {
+        before: beforePlan || null,
+        after: {
+          plan,
+          dailyLimit,
+          expiredAt: expiredAt || null,
+        },
+      },
+    });
+
     return Response.json({
       success: true,
       message: "套餐保存成功。",
@@ -74,7 +142,7 @@ export async function POST(req: Request) {
         userId,
         plan,
         dailyLimit,
-        expiredAt,
+        expiredAt: expiredAt || null,
       },
     });
   } catch (error) {
