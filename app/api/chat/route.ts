@@ -1,10 +1,51 @@
 import OpenAI from "openai";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/security/rate-limit";
 
 const MAX_MESSAGE_LENGTH = 2000;
 
 const ANONYMOUS_DAILY_LIMIT = 5;
 const FREE_DAILY_LIMIT = 10;
+
+const ALLOWED_TOOLS = new Set([
+  "chat",
+  "copy",
+  "title",
+  "ad",
+  "code",
+  "script",
+  "moments",
+  "seo",
+  "report",
+  "rewrite",
+]);
+
+const TOOL_SYSTEM_PROMPTS: Record<string, string> = {
+  chat:
+    "你是 AI Bot Pro 的智能助手，专注于中文问答、资料整理、代码解释和办公效率。请用清晰、实用、适合中文用户的方式回答。不要声称自己是 GPT-4、GPT-3.5 或其他具体模型版本。",
+  copy:
+    "你是 AI Bot Pro 的文案助手，擅长短视频、小红书、朋友圈、私域和营销文案。请输出能直接复制使用的中文文案，结构清晰，表达有吸引力。",
+  title:
+    "你是 AI Bot Pro 的标题助手，擅长生成短视频、文章、广告和社交媒体标题。请给出多个有点击欲望但不夸张造假的标题。",
+  ad:
+    "你是 AI Bot Pro 的广告优化助手，擅长把普通广告词改得更清楚、更有吸引力、更有转化力。请输出可直接使用的广告表达。",
+  code:
+    "你是 AI Bot Pro 的代码助手，擅长解释报错、梳理代码逻辑、给出安全清晰的修改建议。请尽量用新手能看懂的方式回答。",
+  script:
+    "你是 AI Bot Pro 的短视频脚本助手，擅长生成口播脚本、开头钩子、分镜思路和结尾引导。请输出适合中文短视频发布的脚本。",
+  moments:
+    "你是 AI Bot Pro 的朋友圈和私域文案助手，擅长生成自然、不生硬、有转化感的朋友圈、社群和私聊文案。",
+  seo:
+    "你是 AI Bot Pro 的 SEO 文章助手，擅长生成结构清晰、适合网站和公众号发布的中文文章草稿。",
+  report:
+    "你是 AI Bot Pro 的办公总结助手，擅长把零散工作内容整理成日报、周报、总结、复盘和汇报。",
+  rewrite:
+    "你是 AI Bot Pro 的润色改写助手，擅长改写、翻译、润色和优化中文表达。请保持原意，并让表达更自然专业。",
+};
 
 type UserPlan = {
   plan: "free" | "pro";
@@ -25,21 +66,6 @@ const openai = new OpenAI({
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
-}
-
-function getClientIp(req: Request) {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  const realIp = req.headers.get("x-real-ip");
-
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() || "unknown";
-  }
-
-  if (realIp) {
-    return realIp;
-  }
-
-  return "unknown";
 }
 
 function getAnonymousUsage(req: Request) {
@@ -214,6 +240,28 @@ async function increaseUserUsage(userId: string, currentUsed: number) {
   return nextUsed;
 }
 
+function validateTool(rawTool: unknown) {
+  const tool = String(rawTool || "chat").trim().toLowerCase();
+
+  if (!ALLOWED_TOOLS.has(tool)) {
+    return null;
+  }
+
+  return tool;
+}
+
+function getSystemPrompt(tool: string) {
+  return TOOL_SYSTEM_PROMPTS[tool] || TOOL_SYSTEM_PROMPTS.chat;
+}
+
+async function parseJsonBody(req: Request) {
+  try {
+    return await req.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     if (!process.env.DEEPSEEK_API_KEY) {
@@ -223,8 +271,29 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const message = String(body.message || "").trim();
+    const ip = getClientIp(req);
+
+    const globalIpLimit = checkRateLimit(`chat:global-minute:${ip}`, {
+      limit: 20,
+      windowMs: 60 * 1000,
+    });
+
+    if (!globalIpLimit.allowed) {
+      return rateLimitResponse(globalIpLimit.resetAt);
+    }
+
+    const body = await parseJsonBody(req);
+
+    if (!body || typeof body !== "object") {
+      return Response.json({ error: "请求内容格式不正确。" }, { status: 400 });
+    }
+
+    const message = String((body as { message?: unknown }).message || "").trim();
+    const tool = validateTool((body as { tool?: unknown }).tool);
+
+    if (!tool) {
+      return Response.json({ error: "工具类型不正确。" }, { status: 400 });
+    }
 
     if (!message) {
       return Response.json({ error: "请输入内容。" }, { status: 400 });
@@ -238,6 +307,26 @@ export async function POST(req: Request) {
     }
 
     const loginUser = await getLoginUser(req);
+
+    if (loginUser) {
+      const userMinuteLimit = checkRateLimit(`chat:user-minute:${loginUser.id}`, {
+        limit: 12,
+        windowMs: 60 * 1000,
+      });
+
+      if (!userMinuteLimit.allowed) {
+        return rateLimitResponse(userMinuteLimit.resetAt);
+      }
+    } else {
+      const anonymousMinuteLimit = checkRateLimit(`chat:anonymous-minute:${ip}`, {
+        limit: 5,
+        windowMs: 60 * 1000,
+      });
+
+      if (!anonymousMinuteLimit.allowed) {
+        return rateLimitResponse(anonymousMinuteLimit.resetAt);
+      }
+    }
 
     let usageType: "login" | "anonymous" = "anonymous";
     let plan: "free" | "pro" | "anonymous" = "anonymous";
@@ -306,8 +395,7 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content:
-            "你是 AI Bot Pro 的智能助手，专注于中文问答、文案生成、代码解释和办公效率。请用清晰、实用、适合中文用户的方式回答。不要声称自己是 GPT-4、GPT-3.5 或其他具体模型版本。",
+          content: getSystemPrompt(tool),
         },
         {
           role: "user",
