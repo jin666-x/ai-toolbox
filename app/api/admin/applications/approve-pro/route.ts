@@ -1,5 +1,6 @@
-import { Resend } from "resend";
+import { writeAdminAuditLog } from "@/lib/admin-audit-log";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { Resend } from "resend";
 
 type ProApplication = {
   id: string;
@@ -343,15 +344,36 @@ export async function POST(req: Request) {
       updated_at: now,
     };
 
-    const { error: orderError } = existingOrderId
+    const { data: savedOrder, error: orderError } = existingOrderId
       ? await supabase
           .from("pro_orders")
           .update(orderPayload)
           .eq("id", existingOrderId)
-      : await supabase.from("pro_orders").insert(orderPayload);
+          .select("id")
+          .single()
+      : await supabase.from("pro_orders").insert(orderPayload).select("id").single();
 
     if (orderError) {
       console.error("写入 Pro 开通记录失败：", orderError);
+
+      await writeAdminAuditLog({
+        req,
+        action: "approve_pro",
+        targetType: "pro_application",
+        targetId: typedApplication.id,
+        description: "管理员已开通 Pro，但写入开通记录失败。",
+        metadata: {
+          result: "partial_success_order_failed",
+          userId: targetUserId,
+          email: typedApplication.email,
+          plan: typedApplication.plan,
+          dailyLimit,
+          expiredAt,
+          amountCents,
+          emailSent: emailResult.sent,
+          matchedByEmail,
+        },
+      });
 
       return Response.json({
         success: true,
@@ -371,6 +393,28 @@ export async function POST(req: Request) {
         },
       });
     }
+
+    await writeAdminAuditLog({
+      req,
+      action: "approve_pro",
+      targetType: "pro_application",
+      targetId: typedApplication.id,
+      description: "管理员一键审核并开通 Pro。",
+      metadata: {
+        result: "success",
+        orderId: savedOrder?.id || existingOrderId || null,
+        userId: targetUserId,
+        email: typedApplication.email,
+        name: typedApplication.name,
+        plan: typedApplication.plan,
+        dailyLimit,
+        expiredAt,
+        amountCents,
+        emailSent: emailResult.sent,
+        orderSaved: true,
+        matchedByEmail,
+      },
+    });
 
     return Response.json({
       success: true,

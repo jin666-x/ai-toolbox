@@ -8,7 +8,7 @@ export async function POST(req: Request) {
 
     if (!adminSecret) {
       return Response.json(
-        { error: "服务器未配置 ADMIN_SECRET。" },
+        { error: "服务器未配置后台访问密钥。" },
         { status: 500 }
       );
     }

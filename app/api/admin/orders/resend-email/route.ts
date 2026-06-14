@@ -1,5 +1,6 @@
-import { Resend } from "resend";
+import { writeAdminAuditLog } from "@/lib/admin-audit-log";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { Resend } from "resend";
 
 type ProOrder = {
   id: string;
@@ -190,6 +191,21 @@ export async function POST(req: Request) {
     const emailResult = await sendProApprovedEmail(typedOrder);
 
     if (!emailResult.sent) {
+      await writeAdminAuditLog({
+        req,
+        action: "resend_email",
+        targetType: "pro_order",
+        targetId: typedOrder.id,
+        description: "管理员尝试重发 Pro 开通邮件，但发送失败。",
+        metadata: {
+          result: "failed",
+          reason: emailResult.reason || null,
+          email: typedOrder.email,
+          userId: typedOrder.user_id,
+          planName: typedOrder.plan_name,
+        },
+      });
+
       return Response.json(
         {
           error:
@@ -215,12 +231,41 @@ export async function POST(req: Request) {
     if (updateError || !updatedOrder) {
       console.error("邮件已发送，但更新订单 email_sent 失败：", updateError);
 
+      await writeAdminAuditLog({
+        req,
+        action: "resend_email",
+        targetType: "pro_order",
+        targetId: typedOrder.id,
+        description: "管理员已重发 Pro 开通邮件，但订单邮件状态更新失败。",
+        metadata: {
+          result: "partial_success_update_failed",
+          email: typedOrder.email,
+          userId: typedOrder.user_id,
+          planName: typedOrder.plan_name,
+        },
+      });
+
       return Response.json({
         success: true,
         message: "Pro 开通邮件已发送，但订单邮件状态更新失败。",
         order: typedOrder,
       });
     }
+
+    await writeAdminAuditLog({
+      req,
+      action: "resend_email",
+      targetType: "pro_order",
+      targetId: typedOrder.id,
+      description: "管理员重新发送 Pro 开通邮件。",
+      metadata: {
+        result: "success",
+        email: typedOrder.email,
+        userId: typedOrder.user_id,
+        planName: typedOrder.plan_name,
+        expiredAt: typedOrder.expired_at,
+      },
+    });
 
     return Response.json({
       success: true,

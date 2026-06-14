@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://aibotpro.top";
+  const now = new Date();
 
   const publicPages = [
     {
@@ -20,8 +21,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly" as const,
     },
     {
-      path: "/waitlist",
+      path: "/checkout",
       priority: 0.8,
+      changeFrequency: "weekly" as const,
+    },
+    {
+      path: "/waitlist",
+      priority: 0.7,
       changeFrequency: "weekly" as const,
     },
     {
@@ -29,26 +35,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
       changeFrequency: "monthly" as const,
     },
-    {
-      path: "/about",
-      priority: 0.6,
-      changeFrequency: "monthly" as const,
-    },
-    {
-      path: "/privacy",
-      priority: 0.4,
-      changeFrequency: "yearly" as const,
-    },
-    {
-      path: "/terms",
-      priority: 0.4,
-      changeFrequency: "yearly" as const,
-    },
   ];
 
   return publicPages.map((page) => ({
     url: `${baseUrl}${page.path}`,
-    lastModified: new Date(),
+    lastModified: now,
     changeFrequency: page.changeFrequency,
     priority: page.priority,
   }));

@@ -1,3 +1,4 @@
+import { writeAdminAuditLog } from "@/lib/admin-audit-log";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type IncomingSetting = {
@@ -124,7 +125,6 @@ function validateSettingValue(definition: SettingDefinition, rawValue: unknown) 
     };
   }
 
-  // 后台配置最终会显示到前台页面。React 默认会转义，但这里仍然拦截明显的 HTML 注入字符。
   if (/[<>]/.test(value)) {
     return {
       ok: false as const,
@@ -137,7 +137,6 @@ function validateSettingValue(definition: SettingDefinition, rawValue: unknown) 
       return { ok: true as const, value: "" };
     }
 
-    // 允许站内相对路径，例如 /payment/qr.png
     if (value.startsWith("/")) {
       if (value.startsWith("//") || /\s/.test(value)) {
         return {
@@ -169,7 +168,6 @@ function validateSettingValue(definition: SettingDefinition, rawValue: unknown) 
   }
 
   if (definition.type === "price") {
-    // 价格字段允许 ¥19.9、￥199、19.9、199元、¥19.9/月 这类简单格式。
     const priceLike = /^[¥￥$]?\s?\d+(\.\d{1,2})?(\s?元)?(\/月|\/年)?$/;
 
     if (value && !priceLike.test(value)) {
@@ -315,6 +313,29 @@ export async function POST(req: Request) {
 
     const supabase = createAdminClient();
 
+    const { data: beforeSettings } = await supabase
+      .from("site_settings")
+      .select("setting_key, setting_value")
+      .in(
+        "setting_key",
+        updates.map((item) => item.setting_key)
+      );
+
+    const beforeMap = new Map(
+      (beforeSettings || []).map((item) => [
+        item.setting_key,
+        item.setting_value,
+      ])
+    );
+
+    const changedSettings = updates
+      .map((item) => ({
+        setting_key: item.setting_key,
+        before: beforeMap.get(item.setting_key) ?? null,
+        after: item.setting_value,
+      }))
+      .filter((item) => item.before !== item.after);
+
     for (const item of updates) {
       const { error } = await supabase
         .from("site_settings")
@@ -332,6 +353,20 @@ export async function POST(req: Request) {
           { status: 500 }
         );
       }
+    }
+
+    if (changedSettings.length > 0) {
+      await writeAdminAuditLog({
+        req,
+        action: "update_settings",
+        targetType: "site_settings",
+        targetId: "global",
+        description: "管理员修改站点配置。",
+        metadata: {
+          changedCount: changedSettings.length,
+          changedSettings,
+        },
+      });
     }
 
     const { data, error } = await fetchSettings();
