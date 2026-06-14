@@ -1,21 +1,50 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/security/rate-limit";
 
 type CheckoutRequestBody = {
-  name?: string;
-  email?: string;
-  company?: string;
-  plan?: string;
-  paymentMethod?: string;
-  paymentProof?: string;
-  message?: string;
-  userId?: string | null;
+  name?: unknown;
+  email?: unknown;
+  company?: unknown;
+  plan?: unknown;
+  paymentMethod?: unknown;
+  paymentProof?: unknown;
+  message?: unknown;
+  userId?: unknown;
 };
 
 const SITE_URL = "https://aibotpro.top";
 
 function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return (
+    email.length <= 254 &&
+    !/[\r\n]/.test(email) &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  );
+}
+
+function isUuidLike(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
+}
+
+function cleanText(value: unknown) {
+  return String(value ?? "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .trim();
+}
+
+function hasUnsafeHtmlChars(value: string) {
+  return /[<>]/.test(value);
+}
+
+function safeSubjectPart(value: string) {
+  return value.replace(/[\r\n]/g, " ").slice(0, 80);
 }
 
 function escapeHtml(text: string) {
@@ -28,11 +57,31 @@ function escapeHtml(text: string) {
 }
 
 function extractUrls(value: string) {
-  const matches = value.match(/https?:\/\/[^\s"'<>]+|\/[^\s"'<>]+\.(?:png|jpg|jpeg|webp)/gi);
+  const matches = value.match(
+    /https?:\/\/[^\s"'<>]+|\/[^\s"'<>]+\.(?:png|jpg|jpeg|webp)/gi
+  );
 
   return (matches || []).map((item) =>
     item.replace(/[，。；;,.]+$/g, "").trim()
   );
+}
+
+function isAllowedUrl(value: string) {
+  if (value.startsWith("/")) {
+    return !value.startsWith("//") && !/\s/.test(value);
+  }
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function hasInvalidUrls(value: string) {
+  const urls = extractUrls(value);
+  return urls.some((url) => !isAllowedUrl(url));
 }
 
 function isImageUrl(value: string) {
@@ -53,6 +102,41 @@ function normalizeUrl(url: string) {
   }
 
   return url;
+}
+
+async function parseJsonBody(req: Request) {
+  try {
+    return (await req.json()) as CheckoutRequestBody;
+  } catch {
+    return null;
+  }
+}
+
+async function getVerifiedUserId(req: Request) {
+  const authorization = req.headers.get("authorization");
+
+  if (!authorization || !authorization.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const accessToken = authorization.replace("Bearer ", "").trim();
+
+  if (!accessToken) {
+    return null;
+  }
+
+  const supabase = createAdminClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(accessToken);
+
+  if (error || !user?.id) {
+    return null;
+  }
+
+  return user.id;
 }
 
 async function sendAdminCheckoutEmail(params: {
@@ -86,11 +170,12 @@ async function sendAdminCheckoutEmail(params: {
 
     const imageUrls = extractUrls(params.paymentProof)
       .map((url) => normalizeUrl(url))
+      .filter((url) => isAllowedUrl(url))
       .filter((url) => isImageUrl(url));
 
-    const allUrls = extractUrls(params.paymentProof).map((url) =>
-      normalizeUrl(url)
-    );
+    const allUrls = extractUrls(params.paymentProof)
+      .map((url) => normalizeUrl(url))
+      .filter((url) => isAllowedUrl(url));
 
     const safeName = escapeHtml(params.name);
     const safeEmail = escapeHtml(params.email);
@@ -152,7 +237,7 @@ async function sendAdminCheckoutEmail(params: {
     const { error } = await resend.emails.send({
       from: fromEmail,
       to: [toEmail],
-      subject: `AI Bot Pro 新的付款确认：${params.plan}`,
+      subject: `AI Bot Pro 新的付款确认：${safeSubjectPart(params.plan)}`,
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.75; color: #111827; max-width: 720px; margin: 0 auto;">
           <div style="padding: 24px; background: #111827; color: #fff; border-radius: 18px;">
@@ -243,19 +328,49 @@ ${adminUrl}
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as CheckoutRequestBody;
+    const ip = getClientIp(req);
 
-    const name = String(body.name || "").trim();
-    const email = String(body.email || "").trim();
-    const company = String(body.company || "").trim();
-    const plan = String(body.plan || "").trim();
-    const paymentMethod = String(body.paymentMethod || "").trim();
-    const paymentProof = String(body.paymentProof || "").trim();
-    const message = String(body.message || "").trim();
-    const userId = body.userId ? String(body.userId).trim() : null;
+    const minuteLimit = checkRateLimit(`checkout:minute:${ip}`, {
+      limit: 5,
+      windowMs: 60 * 1000,
+    });
+
+    if (!minuteLimit.allowed) {
+      return rateLimitResponse(minuteLimit.resetAt);
+    }
+
+    const hourLimit = checkRateLimit(`checkout:hour:${ip}`, {
+      limit: 20,
+      windowMs: 60 * 60 * 1000,
+    });
+
+    if (!hourLimit.allowed) {
+      return rateLimitResponse(hourLimit.resetAt);
+    }
+
+    const body = await parseJsonBody(req);
+
+    if (!body) {
+      return Response.json({ error: "请求内容格式不正确。" }, { status: 400 });
+    }
+
+    const name = cleanText(body.name);
+    const email = cleanText(body.email).toLowerCase();
+    const company = cleanText(body.company);
+    const plan = cleanText(body.plan);
+    const paymentMethod = cleanText(body.paymentMethod);
+    const paymentProof = cleanText(body.paymentProof);
+    const message = cleanText(body.message);
+    const bodyUserId = cleanText(body.userId);
+    const verifiedUserId = await getVerifiedUserId(req);
+    const userId = verifiedUserId || (isUuidLike(bodyUserId) ? bodyUserId : null);
 
     if (!name) {
       return Response.json({ error: "请填写你的称呼。" }, { status: 400 });
+    }
+
+    if (name.length > 60 || hasUnsafeHtmlChars(name)) {
+      return Response.json({ error: "称呼格式不正确。" }, { status: 400 });
     }
 
     if (!email) {
@@ -269,12 +384,27 @@ export async function POST(req: Request) {
       );
     }
 
+    if (company.length > 120 || hasUnsafeHtmlChars(company)) {
+      return Response.json(
+        { error: "微信 / 公司 / 团队信息格式不正确。" },
+        { status: 400 }
+      );
+    }
+
     if (!plan) {
       return Response.json({ error: "请选择想开通的套餐。" }, { status: 400 });
     }
 
+    if (plan.length > 80 || hasUnsafeHtmlChars(plan)) {
+      return Response.json({ error: "套餐格式不正确。" }, { status: 400 });
+    }
+
     if (!paymentMethod) {
       return Response.json({ error: "请选择付款方式。" }, { status: 400 });
+    }
+
+    if (paymentMethod.length > 80 || hasUnsafeHtmlChars(paymentMethod)) {
+      return Response.json({ error: "付款方式格式不正确。" }, { status: 400 });
     }
 
     if (!paymentProof) {
@@ -291,9 +421,30 @@ export async function POST(req: Request) {
       );
     }
 
+    if (hasUnsafeHtmlChars(paymentProof)) {
+      return Response.json(
+        { error: "付款凭证不能包含 < 或 > 字符。" },
+        { status: 400 }
+      );
+    }
+
+    if (hasInvalidUrls(paymentProof)) {
+      return Response.json(
+        { error: "付款凭证里的链接格式不正确。" },
+        { status: 400 }
+      );
+    }
+
     if (message.length > 1500) {
       return Response.json(
         { error: "补充说明太长了，最多 1500 个字。" },
+        { status: 400 }
+      );
+    }
+
+    if (hasUnsafeHtmlChars(message)) {
+      return Response.json(
+        { error: "补充说明不能包含 < 或 > 字符。" },
         { status: 400 }
       );
     }

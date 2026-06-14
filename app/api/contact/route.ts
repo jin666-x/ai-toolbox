@@ -1,14 +1,33 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/security/rate-limit";
 
 type ContactRequestBody = {
-  email?: string;
-  type?: string;
-  message?: string;
+  email?: unknown;
+  type?: unknown;
+  message?: unknown;
 };
 
 function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return (
+    email.length <= 254 &&
+    !/[\r\n]/.test(email) &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  );
+}
+
+function cleanText(value: unknown) {
+  return String(value ?? "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .trim();
+}
+
+function hasUnsafeHtmlChars(value: string) {
+  return /[<>]/.test(value);
 }
 
 function escapeHtml(text: string) {
@@ -20,13 +39,49 @@ function escapeHtml(text: string) {
     .replaceAll("'", "&#039;");
 }
 
+function safeSubjectPart(value: string) {
+  return value.replace(/[\r\n]/g, " ").slice(0, 80);
+}
+
+async function parseJsonBody(req: Request) {
+  try {
+    return (await req.json()) as ContactRequestBody;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as ContactRequestBody;
+    const ip = getClientIp(req);
 
-    const email = String(body.email || "").trim();
-    const type = String(body.type || "").trim();
-    const message = String(body.message || "").trim();
+    const minuteLimit = checkRateLimit(`contact:minute:${ip}`, {
+      limit: 3,
+      windowMs: 60 * 1000,
+    });
+
+    if (!minuteLimit.allowed) {
+      return rateLimitResponse(minuteLimit.resetAt);
+    }
+
+    const hourLimit = checkRateLimit(`contact:hour:${ip}`, {
+      limit: 10,
+      windowMs: 60 * 60 * 1000,
+    });
+
+    if (!hourLimit.allowed) {
+      return rateLimitResponse(hourLimit.resetAt);
+    }
+
+    const body = await parseJsonBody(req);
+
+    if (!body) {
+      return Response.json({ error: "请求内容格式不正确。" }, { status: 400 });
+    }
+
+    const email = cleanText(body.email).toLowerCase();
+    const type = cleanText(body.type);
+    const message = cleanText(body.message);
 
     if (!email) {
       return Response.json({ error: "请填写邮箱地址。" }, { status: 400 });
@@ -43,6 +98,13 @@ export async function POST(req: Request) {
       return Response.json({ error: "请选择反馈类型。" }, { status: 400 });
     }
 
+    if (type.length > 50 || hasUnsafeHtmlChars(type)) {
+      return Response.json(
+        { error: "反馈类型格式不正确。" },
+        { status: 400 }
+      );
+    }
+
     if (!message) {
       return Response.json(
         { error: "请填写具体反馈内容。" },
@@ -53,6 +115,13 @@ export async function POST(req: Request) {
     if (message.length > 1000) {
       return Response.json(
         { error: "反馈内容太长了，最多 1000 个字。" },
+        { status: 400 }
+      );
+    }
+
+    if (hasUnsafeHtmlChars(message)) {
+      return Response.json(
+        { error: "反馈内容不能包含 < 或 > 字符。" },
         { status: 400 }
       );
     }
@@ -103,7 +172,7 @@ export async function POST(req: Request) {
     const { error } = await resend.emails.send({
       from: fromEmail,
       to: [toEmail],
-      subject: `AI Bot Pro 新反馈：${type}`,
+      subject: `AI Bot Pro 新反馈：${safeSubjectPart(type)}`,
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #111; max-width: 680px;">
           <h2 style="margin-bottom: 16px;">AI Bot Pro 收到新的联系表单</h2>
