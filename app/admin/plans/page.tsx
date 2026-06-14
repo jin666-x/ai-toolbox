@@ -157,7 +157,7 @@ export default function AdminPlansPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="填写 ADMIN_SECRET"
+                placeholder="请输入管理员密码"
                 className="w-full rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-white outline-none placeholder:text-white/30 focus:border-white/30"
               />
             </div>
