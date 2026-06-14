@@ -32,49 +32,49 @@ const tools = [
   {
     id: "chat",
     name: "AI 聊天助手",
-    desc: "日常问答、方案整理、内容创作，帮你快速解决问题。",
-    tag: "通用问答",
+    desc: "把问题、思路、资料交给 AI，快速整理成清晰答案。",
+    tag: "问答整理",
   },
   {
     id: "copy",
     name: "爆款文案",
-    desc: "输入产品或主题，自动生成抖音、小红书、朋友圈文案。",
+    desc: "生成短视频、小红书、朋友圈、私域成交文案。",
     tag: "内容创作",
   },
   {
     id: "title",
     name: "标题生成",
-    desc: "快速生成吸睛标题，适合短视频、广告、公众号。",
+    desc: "为视频、文章、广告快速生成更有点击欲望的标题。",
     tag: "流量标题",
   },
   {
     id: "ad",
     name: "广告优化",
-    desc: "把普通广告词优化成更有点击欲望的转化文案。",
+    desc: "把普通广告词改成更清楚、更有转化力的表达。",
     tag: "提升转化",
   },
   {
     id: "code",
     name: "代码助手",
-    desc: "解释报错、修改页面、辅助开发，小白也能看懂。",
+    desc: "解释报错、辅助改页面、整理代码思路，小白也能看懂。",
     tag: "开发辅助",
   },
   {
     id: "script",
     name: "短视频脚本",
-    desc: "自动生成短视频标题、口播脚本和结尾引导。",
+    desc: "生成口播脚本、开头钩子、结尾引导和分镜思路。",
     tag: "视频创作",
   },
   {
     id: "moments",
     name: "朋友圈文案",
-    desc: "生成适合朋友圈、社群、私域转化的自然文案。",
+    desc: "生成自然不生硬的朋友圈、社群、私域发布内容。",
     tag: "私域运营",
   },
   {
     id: "seo",
-    name: "SEO文章",
-    desc: "生成适合网站、公众号、博客发布的结构化文章。",
+    name: "SEO 文章",
+    desc: "生成结构清晰、适合网站和公众号发布的文章草稿。",
     tag: "搜索优化",
   },
   {
@@ -86,23 +86,61 @@ const tools = [
   {
     id: "rewrite",
     name: "翻译润色",
-    desc: "帮你润色、改写、翻译，让表达更自然更专业。",
+    desc: "改写、润色、翻译，让表达更自然、更专业。",
     tag: "文本优化",
+  },
+];
+
+const audiences = [
+  {
+    title: "自媒体创作者",
+    desc: "快速生成标题、脚本、口播、文案，减少卡壳时间。",
+  },
+  {
+    title: "运营和销售",
+    desc: "优化活动文案、朋友圈内容、广告语和私域转化话术。",
+  },
+  {
+    title: "学生和办公用户",
+    desc: "整理资料、写总结、做日报周报、润色表达更省时间。",
+  },
+  {
+    title: "创业者和小团队",
+    desc: "用一个工具箱覆盖内容、运营、客服、方案和效率需求。",
   },
 ];
 
 const steps = [
   {
-    title: "选择工具",
-    desc: "聊天、文案、标题、广告、脚本、SEO、日报等工具一站集成。",
+    title: "选一个工具",
+    desc: "聊天、文案、标题、广告、脚本、SEO、日报等场景都已分类。",
   },
   {
-    title: "输入需求",
-    desc: "不用会提示词，只需要输入主题、产品、问题或工作内容。",
+    title: "输入简单需求",
+    desc: "不需要会提示词，只要写清楚主题、产品、问题或工作内容。",
   },
   {
-    title: "生成结果",
-    desc: "AI 自动按对应工具格式输出，可直接复制、修改和发布。",
+    title: "复制结果使用",
+    desc: "生成内容可直接复制，也可以继续让 AI 帮你改短、改高级、改成交。",
+  },
+];
+
+const faqs = [
+  {
+    q: "不会写提示词可以用吗？",
+    a: "可以。工具箱已经按场景做了分类，你只需要输入主题或需求，系统会按对应工具生成结果。",
+  },
+  {
+    q: "Free 和 Pro 有什么区别？",
+    a: "未登录可体验 5 次，登录后 Free 每日 10 次，Pro 每日 100 次，更适合高频创作、运营和办公。",
+  },
+  {
+    q: "付款后多久开通？",
+    a: "提交付款截图后由管理员人工审核，审核通过后会开通 Pro，并通过邮件通知你。",
+  },
+  {
+    q: "适合什么人使用？",
+    a: "适合自媒体、运营、销售、办公用户、学生、创业者和小团队，用来提升内容创作和日常工作效率。",
   },
 ];
 
@@ -143,7 +181,7 @@ export default function HomePage() {
         price: "免费",
         unit: "",
         limit: "5 次/天",
-        desc: "不用注册也可以快速体验 AI 工具箱基础能力。",
+        desc: "不用注册也能先试试看，适合快速感受工具效果。",
         button: "立即体验",
         href: "/chat",
         hot: false,
@@ -155,7 +193,7 @@ export default function HomePage() {
         price: "￥0",
         unit: "/ 永久",
         limit: "10 次/天",
-        desc: "注册登录后自动获得每日 10 次额度，适合轻度使用。",
+        desc: "注册登录后自动获得每日额度，适合轻度使用。",
         button: "免费使用",
         href: "/chat",
         hot: false,
@@ -167,24 +205,24 @@ export default function HomePage() {
         price: settings.monthly_price,
         unit: "/ 月",
         limit: "100 次/天",
-        desc: "适合高频创作、短视频运营、广告文案和办公提效。",
-        button: "去付款确认",
+        desc: "适合每天都要写文案、做运营、改标题和处理工作的用户。",
+        button: "开通 Pro",
         href: "/checkout",
         hot: true,
         status: "推荐",
-        features: ["每日 100 次", "人工审核", "上传截图", "邮件通知"],
+        features: ["每日 100 次", "适合高频使用", "付款截图审核", "开通邮件通知"],
       },
       {
         name: "Pro 年卡",
         price: settings.yearly_price,
         unit: "/ 年",
         limit: "100 次/天",
-        desc: "适合长期稳定使用 AI 工具，价格比月卡更划算。",
-        button: "去付款确认",
+        desc: "适合长期使用，比月卡更省心，适合个人和小团队长期提效。",
+        button: "开通年卡",
         href: "/checkout",
         hot: false,
         status: "更划算",
-        features: ["全年使用", "每日 100 次", "适合长期用户", "可续费"],
+        features: ["全年使用", "每日 100 次", "可续费", "适合长期用户"],
       },
     ],
     [settings.monthly_price, settings.yearly_price]
@@ -192,26 +230,26 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-black text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.24),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.22),transparent_35%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.22),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.22),transparent_35%)]" />
 
       <SiteHeader />
 
-      <section className="relative mx-auto flex max-w-7xl flex-col items-center px-6 pb-20 pt-16 text-center md:pt-24">
+      <section className="relative mx-auto flex max-w-7xl flex-col items-center px-6 pb-16 pt-16 text-center md:pb-24 md:pt-24">
         <div className="mb-6 rounded-full border border-white/10 bg-white/10 px-5 py-2 text-sm text-zinc-300 backdrop-blur-xl">
-          一站式 AI 效率工具箱
+          写文案 · 做标题 · 改广告 · 出脚本 · 整理工作
         </div>
 
         <h1 className="max-w-5xl text-5xl font-black leading-tight tracking-tight md:text-7xl">
-          一个网站，
+          把零散需求，
           <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            搞定你的 AI 创作需求
+            变成可直接用的结果
           </span>
         </h1>
 
         <p className="mt-8 max-w-3xl text-lg leading-8 text-zinc-400 md:text-xl">
-          AI Bot Pro 集成文案生成、标题创作、广告优化、短视频脚本、SEO
-          文章、日报周报、代码辅助等常用工具。不需要会写提示词，输入简单需求，
-          AI 自动帮你生成可直接使用的结果。
+          AI Bot Pro 是一个一站式 AI 效率工具箱。你不用研究复杂提示词，
+          只需要输入主题、产品、问题或工作内容，就能生成文案、标题、脚本、
+          文章、总结和代码思路。
         </p>
 
         {settings.site_announcement ? (
@@ -230,14 +268,14 @@ export default function HomePage() {
             href="/chat"
             className="rounded-2xl bg-white px-8 py-4 text-lg font-black text-black transition hover:bg-zinc-200"
           >
-            免费使用
+            先免费使用
           </Link>
 
           <Link
             href="/checkout"
             className="rounded-2xl border border-purple-300/30 bg-purple-500/20 px-8 py-4 text-lg font-black text-purple-100 transition hover:bg-purple-500/30"
           >
-            升级 Pro
+            开通 Pro
           </Link>
 
           <Link
@@ -254,6 +292,10 @@ export default function HomePage() {
             会员中心
           </Link>
         </div>
+
+        <p className="mt-5 text-sm text-zinc-500">
+          未登录可体验 5 次，登录后每日 10 次，Pro 每日 100 次。
+        </p>
 
         <div className="mt-12 grid w-full max-w-6xl gap-4 text-left md:grid-cols-5">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
@@ -280,10 +322,37 @@ export default function HomePage() {
             <div className="text-3xl font-black text-emerald-100">
               {settings.monthly_price}
             </div>
-            <div className="mt-2 text-emerald-100/70">
-              Pro 月卡起
-            </div>
+            <div className="mt-2 text-emerald-100/70">Pro 月卡起</div>
           </div>
+        </div>
+      </section>
+
+      <section className="relative mx-auto max-w-7xl px-6 py-16">
+        <div className="mb-12 text-center">
+          <div className="mb-4 text-sm font-bold text-emerald-300">
+            WHO IS IT FOR
+          </div>
+
+          <h2 className="text-4xl font-black md:text-5xl">
+            适合需要快速产出内容和方案的人
+          </h2>
+
+          <p className="mt-5 text-zinc-400">
+            不是让你学习一堆复杂工具，而是把常用场景整理成一个能直接使用的入口。
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {audiences.map((item) => (
+            <div
+              key={item.title}
+              className="rounded-[2rem] border border-white/10 bg-white/5 p-7 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/10"
+            >
+              <div className="mb-5 h-2 w-16 rounded-full bg-gradient-to-r from-blue-400 to-purple-400" />
+              <h3 className="text-2xl font-black">{item.title}</h3>
+              <p className="mt-4 leading-7 text-zinc-400">{item.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -292,11 +361,11 @@ export default function HomePage() {
           <div className="mb-4 text-sm font-bold text-blue-400">AI TOOLS</div>
 
           <h2 className="text-4xl font-black md:text-5xl">
-            常用 AI 工具，一站集成
+            常用工具，一站集成
           </h2>
 
           <p className="mt-5 text-zinc-400">
-            不用到处找工具，一个页面就能完成大部分创作、办公和运营需求。
+            文案、标题、广告、脚本、SEO、日报、代码辅助，不用来回切换多个工具。
           </p>
         </div>
 
@@ -326,22 +395,21 @@ export default function HomePage() {
       <section id="plans" className="relative mx-auto max-w-7xl px-6 py-20">
         <div className="mb-12 text-center">
           <div className="mb-4 text-sm font-bold text-purple-300">
-            USAGE LIMIT
+            PRICING
           </div>
 
           <h2 className="text-4xl font-black md:text-5xl">
-            免费体验，也能升级 Pro 高频使用
+            先免费试用，再按需求升级
           </h2>
 
           <p className="mt-5 text-zinc-400">
-            未登录可体验 5 次，登录后 Free 每日 10 次，Pro 每日 100 次。
-            月卡和年卡都可以提交付款确认，由管理员人工审核开通。
+            轻度使用可以用 Free，高频内容创作和办公提效建议开通 Pro。
           </p>
 
           <div className="mx-auto mt-6 max-w-3xl rounded-3xl border border-purple-300/20 bg-purple-500/10 p-5 text-sm leading-7 text-purple-100/75">
             当前 Pro 月卡：<span className="font-black text-white">{settings.monthly_price}</span>
             ，Pro 年卡：<span className="font-black text-white">{settings.yearly_price}</span>。
-            价格和公告均由后台配置自动同步。
+            付款后上传截图，管理员审核后开通。
           </div>
         </div>
 
@@ -429,7 +497,7 @@ export default function HomePage() {
             href="/pricing"
             className="inline-flex rounded-2xl bg-white px-8 py-4 font-black text-black transition hover:bg-zinc-200"
           >
-            查看完整套餐价格
+            查看完整套餐
           </Link>
 
           <Link
@@ -459,13 +527,12 @@ export default function HomePage() {
               <h2 className="text-4xl font-black md:text-5xl">
                 不用学习提示词，
                 <br />
-                直接输入需求
+                三步直接出结果
               </h2>
 
               <p className="mt-6 leading-8 text-zinc-400">
-                很多 AI 工具不好用，是因为用户不知道该怎么问。
-                AI Bot Pro 已经帮你把不同工具的专业提示词提前写好，
-                你只需要输入主题，系统会自动套用对应模板。
+                很多 AI 工具不好用，是因为用户不知道该怎么问。AI Bot Pro
+                把常用场景整理成工具入口，你只需要输入主题，系统会自动套用对应场景。
               </p>
             </div>
 
@@ -515,16 +582,16 @@ export default function HomePage() {
               PRO UPGRADE
             </div>
             <h3 className="text-3xl font-black text-purple-100">
-              高频使用升级 Pro
+              高频使用开通 Pro
             </h3>
             <p className="mt-4 leading-7 text-purple-100/70">
-              Pro 每日 100 次，支持上传付款截图，管理员审核后开通，并邮件通知。
+              Pro 每日 100 次，适合每天都要写内容、改文案、做运营、整理工作的人。
             </p>
             <Link
               href="/checkout"
               className="mt-6 inline-flex rounded-2xl bg-white px-6 py-3 font-black text-black transition hover:bg-zinc-200"
             >
-              升级 Pro
+              开通 Pro
             </Link>
           </div>
 
@@ -549,15 +616,39 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="relative mx-auto max-w-7xl px-6 py-20">
+        <div className="mb-12 text-center">
+          <div className="mb-4 text-sm font-bold text-yellow-300">
+            FAQ
+          </div>
+
+          <h2 className="text-4xl font-black md:text-5xl">
+            常见问题
+          </h2>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {faqs.map((item) => (
+            <div
+              key={item.q}
+              className="rounded-[2rem] border border-white/10 bg-white/5 p-7 backdrop-blur-xl"
+            >
+              <h3 className="text-xl font-black">{item.q}</h3>
+              <p className="mt-4 leading-7 text-zinc-400">{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="relative mx-auto max-w-7xl px-6 py-24">
         <div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-10 text-center backdrop-blur-xl md:p-16">
           <h2 className="text-4xl font-black md:text-6xl">
-            现在就开始使用 AI Bot Pro
+            现在就开始用 AI Bot Pro 提高效率
           </h2>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
-            输入一个关键词，AI 自动生成文案、标题、广告词、短视频脚本、
-            SEO 文章和工作汇报。适合自媒体、运营、销售、创业者和办公用户。
+            输入一个关键词或一句需求，快速生成文案、标题、广告词、短视频脚本、
+            SEO 文章和工作汇报。先免费试用，满意再升级 Pro。
           </p>
 
           <div className="mt-8 rounded-3xl border border-white/10 bg-black/30 p-5 text-sm leading-7 text-white/60">
@@ -569,7 +660,14 @@ export default function HomePage() {
               href="/chat"
               className="inline-flex rounded-2xl bg-white px-10 py-4 text-lg font-black text-black transition hover:bg-zinc-200"
             >
-              进入 AI 工具箱
+              免费开始使用
+            </Link>
+
+            <Link
+              href="/checkout"
+              className="inline-flex rounded-2xl border border-purple-300/30 bg-purple-500/20 px-10 py-4 text-lg font-black text-purple-100 transition hover:bg-purple-500/30"
+            >
+              开通 Pro
             </Link>
 
             <Link
@@ -577,13 +675,6 @@ export default function HomePage() {
               className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-10 py-4 text-lg font-black text-white transition hover:bg-white/10"
             >
               查看会员中心
-            </Link>
-
-            <Link
-              href="/checkout"
-              className="inline-flex rounded-2xl border border-purple-300/30 bg-purple-500/20 px-10 py-4 text-lg font-black text-purple-100 transition hover:bg-purple-500/30"
-            >
-              去付款确认
             </Link>
           </div>
         </div>
