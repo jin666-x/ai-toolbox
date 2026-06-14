@@ -11,6 +11,14 @@ const MAX_MESSAGE_LENGTH = 2000;
 const ANONYMOUS_DAILY_LIMIT = 5;
 const FREE_DAILY_LIMIT = 10;
 
+const PRIMARY_AI_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+const PRIMARY_AI_BASE_URL =
+  process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
+
+const BACKUP_AI_BASE_URL = process.env.BACKUP_AI_BASE_URL;
+const BACKUP_AI_API_KEY = process.env.BACKUP_AI_API_KEY;
+const BACKUP_AI_MODEL = process.env.BACKUP_AI_MODEL;
+
 const ALLOWED_TOOLS = new Set([
   "chat",
   "copy",
@@ -57,12 +65,43 @@ type AnonymousUsageRecord = {
   count: number;
 };
 
+type AiProvider = {
+  name: "deepseek" | "backup";
+  client: OpenAI;
+  model: string;
+};
+
 const anonymousUsageMap = new Map<string, AnonymousUsageRecord>();
 
-const openai = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: "https://api.deepseek.com",
-});
+function createPrimaryAiProvider() {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    return null;
+  }
+
+  return {
+    name: "deepseek" as const,
+    client: new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY,
+      baseURL: PRIMARY_AI_BASE_URL,
+    }),
+    model: PRIMARY_AI_MODEL,
+  };
+}
+
+function createBackupAiProvider() {
+  if (!BACKUP_AI_API_KEY || !BACKUP_AI_BASE_URL || !BACKUP_AI_MODEL) {
+    return null;
+  }
+
+  return {
+    name: "backup" as const,
+    client: new OpenAI({
+      apiKey: BACKUP_AI_API_KEY,
+      baseURL: BACKUP_AI_BASE_URL,
+    }),
+    model: BACKUP_AI_MODEL,
+  };
+}
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -262,11 +301,123 @@ async function parseJsonBody(req: Request) {
   }
 }
 
+function isFallbackWorthyError(error: unknown) {
+  const status = Number(
+    (error as { status?: unknown; code?: unknown })?.status ||
+      (error as { statusCode?: unknown })?.statusCode ||
+      0
+  );
+
+  // 429：限流；5xx：上游异常；0：网络错误/超时/未知错误。
+  return status === 0 || status === 429 || status >= 500;
+}
+
+async function callAiProvider({
+  provider,
+  tool,
+  message,
+}: {
+  provider: AiProvider;
+  tool: string;
+  message: string;
+}) {
+  const completion = await provider.client.chat.completions.create({
+    model: provider.model,
+    messages: [
+      {
+        role: "system",
+        content: getSystemPrompt(tool),
+      },
+      {
+        role: "user",
+        content: message,
+      },
+    ],
+    temperature: 0.7,
+  });
+
+  const reply = completion.choices[0]?.message?.content?.trim();
+
+  if (!reply) {
+    throw new Error(`${provider.name} 没有返回有效内容。`);
+  }
+
+  return {
+    reply,
+    provider: provider.name,
+    model: provider.model,
+  };
+}
+
+async function callAiWithFallback({
+  tool,
+  message,
+}: {
+  tool: string;
+  message: string;
+}) {
+  const primaryProvider = createPrimaryAiProvider();
+  const backupProvider = createBackupAiProvider();
+
+  if (!primaryProvider && !backupProvider) {
+    throw new Error(
+      "服务器未配置 AI 接口。请配置 DEEPSEEK_API_KEY，或配置 BACKUP_AI_BASE_URL / BACKUP_AI_API_KEY / BACKUP_AI_MODEL。"
+    );
+  }
+
+  if (!primaryProvider && backupProvider) {
+    return callAiProvider({
+      provider: backupProvider,
+      tool,
+      message,
+    });
+  }
+
+  if (!primaryProvider) {
+    throw new Error("服务器未配置主 AI 接口。");
+  }
+
+  try {
+    return await callAiProvider({
+      provider: primaryProvider,
+      tool,
+      message,
+    });
+  } catch (primaryError) {
+    console.error("主 AI 接口调用失败：", primaryError);
+
+    if (!backupProvider || !isFallbackWorthyError(primaryError)) {
+      throw primaryError;
+    }
+
+    try {
+      console.warn("正在切换备用 AI 接口。");
+
+      return await callAiProvider({
+        provider: backupProvider,
+        tool,
+        message,
+      });
+    } catch (backupError) {
+      console.error("备用 AI 接口调用失败：", backupError);
+      throw backupError;
+    }
+  }
+}
+
 export async function POST(req: Request) {
   try {
-    if (!process.env.DEEPSEEK_API_KEY) {
+    const hasPrimaryAi = Boolean(process.env.DEEPSEEK_API_KEY);
+    const hasBackupAi = Boolean(
+      BACKUP_AI_BASE_URL && BACKUP_AI_API_KEY && BACKUP_AI_MODEL
+    );
+
+    if (!hasPrimaryAi && !hasBackupAi) {
       return Response.json(
-        { error: "服务器未配置 DEEPSEEK_API_KEY。" },
+        {
+          error:
+            "服务器未配置 AI 接口。请配置 DEEPSEEK_API_KEY，或配置 BACKUP_AI_BASE_URL / BACKUP_AI_API_KEY / BACKUP_AI_MODEL。",
+        },
         { status: 500 }
       );
     }
@@ -390,29 +541,10 @@ export async function POST(req: Request) {
       }
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "deepseek-chat",
-      messages: [
-        {
-          role: "system",
-          content: getSystemPrompt(tool),
-        },
-        {
-          role: "user",
-          content: message,
-        },
-      ],
-      temperature: 0.7,
+    const aiResult = await callAiWithFallback({
+      tool,
+      message,
     });
-
-    const reply = completion.choices[0]?.message?.content?.trim();
-
-    if (!reply) {
-      return Response.json(
-        { error: "AI 暂时没有返回内容，请稍后再试。" },
-        { status: 500 }
-      );
-    }
 
     let nextUsed = used + 1;
 
@@ -423,13 +555,17 @@ export async function POST(req: Request) {
     }
 
     return Response.json({
-      reply,
+      reply: aiResult.reply,
       usage: {
         type: usageType,
         plan,
         used: nextUsed,
         limit,
         remaining: Math.max(limit - nextUsed, 0),
+      },
+      ai: {
+        provider: aiResult.provider,
+        model: aiResult.model,
       },
     });
   } catch (error) {
