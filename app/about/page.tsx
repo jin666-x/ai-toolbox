@@ -1,15 +1,13 @@
 import Link from "next/link";
-import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
 
 const values = [
   {
     title: "降低 AI 使用门槛",
-    desc: "不用学习复杂提示词，用户只需要输入简单需求，就能快速生成内容。",
+    desc: "不用学习复杂提示词，输入需求就能快速生成可直接使用的内容。",
   },
   {
     title: "提升内容创作效率",
-    desc: "覆盖文案、标题、广告、脚本、SEO文章、日报周报等高频场景。",
+    desc: "覆盖文案、标题、广告、脚本、SEO 文章、日报周报等高频场景。",
   },
   {
     title: "面向真实使用场景",
@@ -22,7 +20,35 @@ export default function AboutPage() {
     <main className="min-h-screen overflow-hidden bg-black text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.2),transparent_35%)]" />
 
-      <SiteHeader />
+      <header className="relative z-10 border-b border-white/10 bg-black/40 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <Link href="/" className="text-xl font-black tracking-tight">
+            AI Bot Pro
+          </Link>
+
+          <nav className="hidden items-center gap-6 text-sm text-zinc-300 md:flex">
+            <Link href="/" className="transition hover:text-white">
+              首页
+            </Link>
+            <Link href="/pricing" className="transition hover:text-white">
+              套餐价格
+            </Link>
+            <Link href="/chat" className="transition hover:text-white">
+              工具箱
+            </Link>
+            <Link href="/contact" className="transition hover:text-white">
+              联系我们
+            </Link>
+          </nav>
+
+          <Link
+            href="/chat"
+            className="rounded-full bg-white px-5 py-2 text-sm font-black text-black transition hover:bg-zinc-200"
+          >
+            免费体验
+          </Link>
+        </div>
+      </header>
 
       <section className="relative mx-auto max-w-7xl px-6 pb-20 pt-16 text-center md:pt-24">
         <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/10 px-5 py-2 text-sm text-zinc-300 backdrop-blur-xl">
@@ -40,7 +66,7 @@ export default function AboutPage() {
         <p className="mx-auto mt-8 max-w-3xl text-lg leading-8 text-zinc-400">
           AI Bot Pro 是一个一站式 AI 效率工具箱，致力于把常用 AI 能力做成简单、
           直接、好用的工具。用户无需学习复杂提示词，也能快速生成文案、标题、
-          广告词、短视频脚本、SEO文章、日报周报和更多实用内容。
+          广告词、短视频脚本、SEO 文章、日报周报和更多实用内容。
         </p>
 
         <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
@@ -75,7 +101,6 @@ export default function AboutPage() {
               className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/10"
             >
               <h2 className="text-3xl font-black">{item.title}</h2>
-
               <p className="mt-5 leading-8 text-zinc-400">{item.desc}</p>
             </div>
           ))}
@@ -159,7 +184,9 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <SiteFooter />
+      <footer className="relative z-10 border-t border-white/10 px-6 py-8 text-center text-sm text-zinc-500">
+        © {new Date().getFullYear()} AI Bot Pro. All rights reserved.
+      </footer>
     </main>
   );
 }

@@ -11,6 +11,13 @@ const MAX_MESSAGE_LENGTH = 2000;
 const ANONYMOUS_DAILY_LIMIT = 5;
 const FREE_DAILY_LIMIT = 10;
 
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+const DEEPSEEK_BASE_URL =
+  process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
+
+
 const ALLOWED_TOOLS = new Set([
   "chat",
   "copy",
@@ -26,7 +33,7 @@ const ALLOWED_TOOLS = new Set([
 
 const GLOBAL_REPLY_STYLE = `
 回答风格必须遵守：
-1. 像真人微信聊天一样回答，口语一点，直接一点。
+1. 像真人聊天一样回答，口语一点，直接一点。
 2. 禁止使用这些标题：核心结论、详细说明、建议、建议1、建议2、第1点、第2点、第3点。
 3. 禁止把普通聊天回答写成报告、论文、客服模板。
 4. 用户问“你好”“在吗”这种简单问题时，只需要自然回复一句，不要自我介绍一大段。
@@ -69,12 +76,42 @@ type AnonymousUsageRecord = {
   count: number;
 };
 
+type AiProvider = {
+  name: "openai" | "deepseek";
+  client: OpenAI;
+  model: string;
+};
+
 const anonymousUsageMap = new Map<string, AnonymousUsageRecord>();
 
-const openai = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: "https://api.deepseek.com",
-});
+function createOpenAiProvider() {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+
+  return {
+    name: "openai" as const,
+    client: new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    }),
+    model: OPENAI_MODEL,
+  };
+}
+
+function createDeepSeekBackupProvider() {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    return null;
+  }
+
+  return {
+    name: "deepseek" as const,
+    client: new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY,
+      baseURL: DEEPSEEK_BASE_URL,
+    }),
+    model: DEEPSEEK_MODEL,
+  };
+}
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -276,11 +313,123 @@ async function parseJsonBody(req: Request) {
   }
 }
 
+
+function getErrorStatus(error: unknown) {
+  return Number(
+    (error as { status?: unknown; code?: unknown })?.status ||
+      (error as { statusCode?: unknown })?.statusCode ||
+      0
+  );
+}
+
+function shouldUseDeepSeekBackup(error: unknown) {
+  const status = getErrorStatus(error);
+
+  // 429：OpenAI 限流；5xx：OpenAI 服务异常；0：网络错误 / 超时 / 未知错误。
+  return status === 0 || status === 429 || status >= 500;
+}
+
+async function callAiProvider({
+  provider,
+  tool,
+  message,
+}: {
+  provider: AiProvider;
+  tool: string;
+  message: string;
+}) {
+  const completion = await provider.client.chat.completions.create({
+    model: provider.model,
+    messages: [
+      {
+        role: "system",
+        content: getSystemPrompt(tool),
+      },
+      {
+        role: "system",
+        content:
+          "再次强调：不要使用‘核心结论、详细说明、建议1、第1点’这种模板标题。请像真人聊天一样自然回复。",
+      },
+      {
+        role: "user",
+        content: message,
+      },
+    ],
+    temperature: 0.7,
+  });
+
+  const reply = completion.choices[0]?.message?.content?.trim();
+
+  if (!reply) {
+    throw new Error(`${provider.name} 没有返回有效内容。`);
+  }
+
+  return {
+    reply,
+    provider: provider.name,
+    model: provider.model,
+  };
+}
+
+async function callAiWithDeepSeekBackup({
+  tool,
+  message,
+}: {
+  tool: string;
+  message: string;
+}) {
+  const openAiProvider = createOpenAiProvider();
+  const deepSeekProvider = createDeepSeekBackupProvider();
+
+  if (!openAiProvider && !deepSeekProvider) {
+    throw new Error(
+      "服务器未配置 AI 接口。请至少配置 OPENAI_API_KEY 或 DEEPSEEK_API_KEY。"
+    );
+  }
+
+  if (!openAiProvider && deepSeekProvider) {
+    return callAiProvider({
+      provider: deepSeekProvider,
+      tool,
+      message,
+    });
+  }
+
+  if (!openAiProvider) {
+    throw new Error("服务器未配置 OpenAI 主接口。");
+  }
+
+  try {
+    return await callAiProvider({
+      provider: openAiProvider,
+      tool,
+      message,
+    });
+  } catch (openAiError) {
+    console.error("OpenAI 主接口调用失败：", openAiError);
+
+    if (!deepSeekProvider || !shouldUseDeepSeekBackup(openAiError)) {
+      throw openAiError;
+    }
+
+    console.warn("OpenAI 异常，正在切换 DeepSeek 备用接口。");
+
+    return callAiProvider({
+      provider: deepSeekProvider,
+      tool,
+      message,
+    });
+  }
+}
+
 export async function POST(req: Request) {
   try {
-    if (!process.env.DEEPSEEK_API_KEY) {
+    const hasOpenAi = Boolean(process.env.OPENAI_API_KEY);
+    const hasDeepSeekBackup = Boolean(process.env.DEEPSEEK_API_KEY);
+
+    if (!hasOpenAi && !hasDeepSeekBackup) {
       return Response.json(
-        { error: "服务器未配置 DEEPSEEK_API_KEY。" },
+        { error: "服务器未配置 AI 接口，请配置 OPENAI_API_KEY 或 DEEPSEEK_API_KEY。" },
         { status: 500 }
       );
     }
@@ -404,34 +553,10 @@ export async function POST(req: Request) {
       }
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "deepseek-chat",
-      messages: [
-        {
-          role: "system",
-          content: getSystemPrompt(tool),
-        },
-        {
-          role: "system",
-          content:
-            "再次强调：不要使用‘核心结论、详细说明、建议1、第1点’这种模板标题。请像真人聊天一样自然回复。",
-        },
-        {
-          role: "user",
-          content: message,
-        },
-      ],
-      temperature: 0.7,
+    const aiResult = await callAiWithDeepSeekBackup({
+      tool,
+      message,
     });
-
-    const reply = completion.choices[0]?.message?.content?.trim();
-
-    if (!reply) {
-      return Response.json(
-        { error: "AI 暂时没有返回内容，请稍后再试。" },
-        { status: 500 }
-      );
-    }
 
     let nextUsed = used + 1;
 
@@ -442,13 +567,17 @@ export async function POST(req: Request) {
     }
 
     return Response.json({
-      reply,
+      reply: aiResult.reply,
       usage: {
         type: usageType,
         plan,
         used: nextUsed,
         limit,
         remaining: Math.max(limit - nextUsed, 0),
+      },
+      ai: {
+        provider: aiResult.provider,
+        model: aiResult.model,
       },
     });
   } catch (error) {
