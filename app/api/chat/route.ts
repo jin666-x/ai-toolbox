@@ -11,14 +11,6 @@ const MAX_MESSAGE_LENGTH = 2000;
 const ANONYMOUS_DAILY_LIMIT = 5;
 const FREE_DAILY_LIMIT = 10;
 
-const PRIMARY_AI_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
-const PRIMARY_AI_BASE_URL =
-  process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
-
-const BACKUP_AI_BASE_URL = process.env.BACKUP_AI_BASE_URL;
-const BACKUP_AI_API_KEY = process.env.BACKUP_AI_API_KEY;
-const BACKUP_AI_MODEL = process.env.BACKUP_AI_MODEL;
-
 const ALLOWED_TOOLS = new Set([
   "chat",
   "copy",
@@ -32,9 +24,21 @@ const ALLOWED_TOOLS = new Set([
   "rewrite",
 ]);
 
+const GLOBAL_REPLY_STYLE = `
+回答风格要求：
+1. 像真人聊天一样回答，不要像报告、论文、客服模板。
+2. 默认不要使用“核心结论、详细说明、第1点、第2点、建议1、建议2”这种固定标题。
+3. 用户问简单问题时，直接给答案，别绕圈。
+4. 用户在做网站、代码、部署、服务器相关操作时，用短句、分步骤、可直接执行的方式回答。
+5. 用户明显是新手时，用大白话解释，不要堆术语。
+6. 可以适当分段，但不要过度格式化。
+7. 不要自称 GPT-4、GPT-3.5 或其他具体模型版本。
+8. 不确定时直接说不确定，并告诉用户下一步怎么查。
+`.trim();
+
 const TOOL_SYSTEM_PROMPTS: Record<string, string> = {
   chat:
-    "你是 AI Bot Pro 的智能助手，专注于中文问答、资料整理、代码解释和办公效率。请用清晰、实用、适合中文用户的方式回答。不要声称自己是 GPT-4、GPT-3.5 或其他具体模型版本。",
+    "你是 AI Bot Pro 的智能助手，主要用中文和用户自然对话。用户更喜欢直接、实用、像真人聊天的回答方式。回答时先解决用户当前问题，不要默认写成报告格式。",
   copy:
     "你是 AI Bot Pro 的文案助手，擅长短视频、小红书、朋友圈、私域和营销文案。请输出能直接复制使用的中文文案，结构清晰，表达有吸引力。",
   title:
@@ -65,43 +69,12 @@ type AnonymousUsageRecord = {
   count: number;
 };
 
-type AiProvider = {
-  name: "deepseek" | "backup";
-  client: OpenAI;
-  model: string;
-};
-
 const anonymousUsageMap = new Map<string, AnonymousUsageRecord>();
 
-function createPrimaryAiProvider() {
-  if (!process.env.DEEPSEEK_API_KEY) {
-    return null;
-  }
-
-  return {
-    name: "deepseek" as const,
-    client: new OpenAI({
-      apiKey: process.env.DEEPSEEK_API_KEY,
-      baseURL: PRIMARY_AI_BASE_URL,
-    }),
-    model: PRIMARY_AI_MODEL,
-  };
-}
-
-function createBackupAiProvider() {
-  if (!BACKUP_AI_API_KEY || !BACKUP_AI_BASE_URL || !BACKUP_AI_MODEL) {
-    return null;
-  }
-
-  return {
-    name: "backup" as const,
-    client: new OpenAI({
-      apiKey: BACKUP_AI_API_KEY,
-      baseURL: BACKUP_AI_BASE_URL,
-    }),
-    model: BACKUP_AI_MODEL,
-  };
-}
+const openai = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: "https://api.deepseek.com",
+});
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -290,7 +263,9 @@ function validateTool(rawTool: unknown) {
 }
 
 function getSystemPrompt(tool: string) {
-  return TOOL_SYSTEM_PROMPTS[tool] || TOOL_SYSTEM_PROMPTS.chat;
+  const toolPrompt = TOOL_SYSTEM_PROMPTS[tool] || TOOL_SYSTEM_PROMPTS.chat;
+
+  return `${toolPrompt}\n\n${GLOBAL_REPLY_STYLE}`;
 }
 
 async function parseJsonBody(req: Request) {
@@ -301,123 +276,11 @@ async function parseJsonBody(req: Request) {
   }
 }
 
-function isFallbackWorthyError(error: unknown) {
-  const status = Number(
-    (error as { status?: unknown; code?: unknown })?.status ||
-      (error as { statusCode?: unknown })?.statusCode ||
-      0
-  );
-
-  // 429：限流；5xx：上游异常；0：网络错误/超时/未知错误。
-  return status === 0 || status === 429 || status >= 500;
-}
-
-async function callAiProvider({
-  provider,
-  tool,
-  message,
-}: {
-  provider: AiProvider;
-  tool: string;
-  message: string;
-}) {
-  const completion = await provider.client.chat.completions.create({
-    model: provider.model,
-    messages: [
-      {
-        role: "system",
-        content: getSystemPrompt(tool),
-      },
-      {
-        role: "user",
-        content: message,
-      },
-    ],
-    temperature: 0.7,
-  });
-
-  const reply = completion.choices[0]?.message?.content?.trim();
-
-  if (!reply) {
-    throw new Error(`${provider.name} 没有返回有效内容。`);
-  }
-
-  return {
-    reply,
-    provider: provider.name,
-    model: provider.model,
-  };
-}
-
-async function callAiWithFallback({
-  tool,
-  message,
-}: {
-  tool: string;
-  message: string;
-}) {
-  const primaryProvider = createPrimaryAiProvider();
-  const backupProvider = createBackupAiProvider();
-
-  if (!primaryProvider && !backupProvider) {
-    throw new Error(
-      "服务器未配置 AI 接口。请配置 DEEPSEEK_API_KEY，或配置 BACKUP_AI_BASE_URL / BACKUP_AI_API_KEY / BACKUP_AI_MODEL。"
-    );
-  }
-
-  if (!primaryProvider && backupProvider) {
-    return callAiProvider({
-      provider: backupProvider,
-      tool,
-      message,
-    });
-  }
-
-  if (!primaryProvider) {
-    throw new Error("服务器未配置主 AI 接口。");
-  }
-
-  try {
-    return await callAiProvider({
-      provider: primaryProvider,
-      tool,
-      message,
-    });
-  } catch (primaryError) {
-    console.error("主 AI 接口调用失败：", primaryError);
-
-    if (!backupProvider || !isFallbackWorthyError(primaryError)) {
-      throw primaryError;
-    }
-
-    try {
-      console.warn("正在切换备用 AI 接口。");
-
-      return await callAiProvider({
-        provider: backupProvider,
-        tool,
-        message,
-      });
-    } catch (backupError) {
-      console.error("备用 AI 接口调用失败：", backupError);
-      throw backupError;
-    }
-  }
-}
-
 export async function POST(req: Request) {
   try {
-    const hasPrimaryAi = Boolean(process.env.DEEPSEEK_API_KEY);
-    const hasBackupAi = Boolean(
-      BACKUP_AI_BASE_URL && BACKUP_AI_API_KEY && BACKUP_AI_MODEL
-    );
-
-    if (!hasPrimaryAi && !hasBackupAi) {
+    if (!process.env.DEEPSEEK_API_KEY) {
       return Response.json(
-        {
-          error:
-            "服务器未配置 AI 接口。请配置 DEEPSEEK_API_KEY，或配置 BACKUP_AI_BASE_URL / BACKUP_AI_API_KEY / BACKUP_AI_MODEL。",
-        },
+        { error: "服务器未配置 DEEPSEEK_API_KEY。" },
         { status: 500 }
       );
     }
@@ -541,10 +404,29 @@ export async function POST(req: Request) {
       }
     }
 
-    const aiResult = await callAiWithFallback({
-      tool,
-      message,
+    const completion = await openai.chat.completions.create({
+      model: "deepseek-chat",
+      messages: [
+        {
+          role: "system",
+          content: getSystemPrompt(tool),
+        },
+        {
+          role: "user",
+          content: message,
+        },
+      ],
+      temperature: 0.7,
     });
+
+    const reply = completion.choices[0]?.message?.content?.trim();
+
+    if (!reply) {
+      return Response.json(
+        { error: "AI 暂时没有返回内容，请稍后再试。" },
+        { status: 500 }
+      );
+    }
 
     let nextUsed = used + 1;
 
@@ -555,17 +437,13 @@ export async function POST(req: Request) {
     }
 
     return Response.json({
-      reply: aiResult.reply,
+      reply,
       usage: {
         type: usageType,
         plan,
         used: nextUsed,
         limit,
         remaining: Math.max(limit - nextUsed, 0),
-      },
-      ai: {
-        provider: aiResult.provider,
-        model: aiResult.model,
       },
     });
   } catch (error) {
